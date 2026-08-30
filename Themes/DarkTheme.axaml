@@ -1,0 +1,33 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- Cores do tema escuro -->
+    <Color x:Key="SystemAccentColor">#3B82F6</Color>
+    <Color x:Key="SystemAccentColorDark1">#2563EB</Color>
+    <Color x:Key="SystemAccentColorDark2">#1D4ED8</Color>
+    
+    <SolidColorBrush x:Key="SystemAccentBrush" Color="#3B82F6" />
+    <SolidColorBrush x:Key="SystemAccentColorDark1Brush" Color="#2563EB" />
+    <SolidColorBrush x:Key="SystemAccentColorDark2Brush" Color="#1D4ED8" />
+
+    <SolidColorBrush x:Key="SystemControlBackgroundAltMediumBrush" Color="#2D2D2D" />
+    <SolidColorBrush x:Key="SystemControlBackgroundAltHighBrush" Color="#1F1F1F" />
+    <SolidColorBrush x:Key="SystemControlForegroundBaseHighBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="SystemControlForegroundBaseMediumBrush" Color="#E0E0E0" />
+    <SolidColorBrush x:Key="SystemControlForegroundBaseLowBrush" Color="#A0A0A0" />
+    
+    <SolidColorBrush x:Key="SystemControlHighlightBaseMediumLowBrush" Color="#404040" />
+    <SolidColorBrush x:Key="SystemControlHighlightBaseMediumBrush" Color="#606060" />
+    <SolidColorBrush x:Key="SystemControlHighlightBaseMediumHighBrush" Color="#808080" />
+    
+    <SolidColorBrush x:Key="SystemControlDisabledBaseMediumLowBrush" Color="#404040" />
+    <SolidColorBrush x:Key="SystemControlDisabledBaseMediumBrush" Color="#606060" />
+    <SolidColorBrush x:Key="SystemControlDisabledBaseMediumHighBrush" Color="#808080" />
+    
+    <SolidColorBrush x:Key="SystemControlTransientBorderBrush" Color="#404040" />
+    <SolidColorBrush x:Key="SystemControlTransparentBrush" Color="Transparent" />
+    
+    <SolidColorBrush x:Key="SystemControlErrorTextForegroundBrush" Color="#FF6B6B" />
+    <SolidColorBrush x:Key="SystemControlSuccessTextForegroundBrush" Color="#4ADE80" />
+    <SolidColorBrush x:Key="SystemControlWarningTextForegroundBrush" Color="#FBBF24" />
+</ResourceDictionary>

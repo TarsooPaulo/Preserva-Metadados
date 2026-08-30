@@ -1,0 +1,77 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PreservaMetadados.ViewModels"
+        xmlns:models="using:PreservaMetadados.Models"
+        xmlns:converters="using:PreservaMetadados.Converters"
+        x:Class="PreservaMetadados.Views.SettingsWindow"
+        Title="Configurações"
+        Width="600" Height="520"
+        WindowStartupLocation="CenterOwner"
+        x:DataType="vm:SettingsViewModel">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="16">
+        <!-- Cabeçalho -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+            <TextBlock Grid.Column="0" Text="Configurações" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Fechar" Click="OnCloseClicked" />
+        </Grid>
+        
+        <!-- Tabs de Configuração -->
+        <TabControl Grid.Row="1">
+            <!-- Geral -->
+            <TabItem Header="Geral">
+                <StackPanel Spacing="12" Margin="0,16">
+                    <ToggleSwitch IsChecked="{Binding IsDarkTheme}" OnContent="Tema Escuro" OffContent="Tema Claro" />
+                    <ToggleSwitch IsChecked="{Binding PreserveMetadata}" OnContent="Preservar Metadados" OffContent="Não Preservar" />
+                    <ToggleSwitch IsChecked="{Binding VerifyTransfer}" OnContent="Verificar Transferência" OffContent="Não Verificar" />
+                    <ToggleSwitch IsChecked="{Binding AutoStartTransfer}" OnContent="Início Automático" OffContent="Manual" />
+                </StackPanel>
+            </TabItem>
+            
+            <!-- Transferência -->
+            <TabItem Header="Transferência">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="12" Margin="0,16">
+                        <TextBlock Text="Resolução de Conflitos" FontWeight="Bold" />
+                        <RadioButton GroupName="Conflict" Content="Perguntar" 
+                                     IsChecked="{Binding ConflictSettings.DefaultResolution, Converter={StaticResource EnumEqualConverter}, ConverterParameter={x:Static models:ConflictResolution.Ask}}" />
+                        <RadioButton GroupName="Conflict" Content="Sobrescrever se mais antigo" 
+                                     IsChecked="{Binding ConflictSettings.DefaultResolution, Converter={StaticResource EnumEqualConverter}, ConverterParameter={x:Static models:ConflictResolution.OverwriteIfOlder}}" />
+                        <RadioButton GroupName="Conflict" Content="Sobrescrever sempre" 
+                                     IsChecked="{Binding ConflictSettings.DefaultResolution, Converter={StaticResource EnumEqualConverter}, ConverterParameter={x:Static models:ConflictResolution.OverwriteAlways}}" />
+                        <RadioButton GroupName="Conflict" Content="Ignorar" 
+                                     IsChecked="{Binding ConflictSettings.DefaultResolution, Converter={StaticResource EnumEqualConverter}, ConverterParameter={x:Static models:ConflictResolution.Ignore}}" />
+                        <RadioButton GroupName="Conflict" Content="Renomear" 
+                                     IsChecked="{Binding ConflictSettings.DefaultResolution, Converter={StaticResource EnumEqualConverter}, ConverterParameter={x:Static models:ConflictResolution.Rename}}" />
+                        
+                        <TextBlock Text="Sufixo para renomear:" Margin="0,8,0,0" />
+                        <TextBox Text="{Binding ConflictSettings.RenameSuffix}" />
+                        
+                        <TextBlock Text="Transferências paralelas:" Margin="0,8,0,0" />
+                        <Slider Minimum="1" Maximum="10" Value="{Binding MaxParallelTransfers}" 
+                               TickFrequency="1" IsSnapToTickEnabled="True" />
+                        <TextBlock Text="{Binding MaxParallelTransfers}" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            
+            <!-- Wi-Fi -->
+            <TabItem Header="Wi-Fi">
+                <StackPanel Spacing="12" Margin="0,16">
+                    <TextBlock Text="Servidor Wi-Fi" FontWeight="Bold" />
+                    <TextBlock Text="Endereço IP:" />
+                    <TextBox Text="{Binding WifiServerAddress}" Watermark="192.168.1.100" />
+                    <TextBlock Text="Porta:" />
+                    <TextBox Text="{Binding WifiServerPort}" Watermark="8080" />
+                    <Button Content="Testar Conexão" Command="{Binding TestWifiConnectionCommand}" />
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+        
+        <!-- Botões de Ação -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="Restaurar Padrão" Command="{Binding ResetDefaultsCommand}" />
+            <Button Content="Salvar" Classes="accent" Command="{Binding SaveSettingsCommand}" Click="OnCloseClicked" />
+        </StackPanel>
+    </Grid>
+</Window>

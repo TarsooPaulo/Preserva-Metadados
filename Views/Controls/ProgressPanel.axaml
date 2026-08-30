@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:PreservaMetadados.Views.Controls"
+             x:Class="PreservaMetadados.Views.Controls.ProgressPanel">
+    
+    <StackPanel Spacing="8" Margin="4">
+        <TextBlock Text="Progresso Geral" FontSize="14" FontWeight="Bold" />
+        
+        <ProgressBar Value="{Binding OverallProgress, RelativeSource={RelativeSource AncestorType=controls:ProgressPanel}}" 
+                     Maximum="100" 
+                     Height="20" />
+        
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="{Binding StatusMessage, RelativeSource={RelativeSource AncestorType=controls:ProgressPanel}}" />
+            <TextBlock Grid.Column="1" Text="{Binding OverallProgress, RelativeSource={RelativeSource AncestorType=controls:ProgressPanel}, StringFormat={}{0:F1}%}" />
+        </Grid>
+        
+        <Grid ColumnDefinitions="*,*,*" Margin="0,8,0,0">
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Início" FontSize="10" Opacity="0.7" />
+                <TextBlock Text="{Binding TransferStartTime, RelativeSource={RelativeSource AncestorType=controls:ProgressPanel}, StringFormat={}{0:HH:mm:ss}}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="Fim" FontSize="10" Opacity="0.7" />
+                <TextBlock Text="{Binding TransferEndTime, RelativeSource={RelativeSource AncestorType=controls:ProgressPanel}, StringFormat={}{0:HH:mm:ss}}" />
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+                <TextBlock Text="Duração" FontSize="10" Opacity="0.7" />
+                <TextBlock Text="{Binding TransferDuration, RelativeSource={RelativeSource AncestorType=controls:ProgressPanel}, StringFormat={}{0:hh\\:mm\\:ss}}" />
+            </StackPanel>
+        </Grid>
+    </StackPanel>
+</UserControl>

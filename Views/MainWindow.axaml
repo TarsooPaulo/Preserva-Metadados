@@ -1,0 +1,106 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PreservaMetadados.ViewModels"
+        xmlns:models="using:PreservaMetadados.Models"
+        xmlns:controls="clr-namespace:PreservaMetadados.Views.Controls"
+        x:Class="PreservaMetadados.Views.MainWindow"
+        Title="{Binding Title}"
+        Width="1200" Height="800"
+        MinWidth="800" MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        x:DataType="vm:MainWindowViewModel">
+
+    <Grid RowDefinitions="Auto,*" Margin="12">
+        <!-- Menu e Barra de Ferramentas -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                <Button Content="Adicionar Arquivos" Command="{Binding AddFilesCommand}" />
+                <Button Content="Limpar Lista" Command="{Binding ClearItemsCommand}" />
+                <Button Content="Iniciar Transferência" Command="{Binding StartTransferCommand}" Classes="accent" />
+                <Button Content="Cancelar" Command="{Binding CancelTransferCommand}" IsEnabled="{Binding IsBusy}" />
+                <Button Content="Configurações" Command="{Binding OpenSettingsCommand}" />
+            </StackPanel>
+            
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                <TextBlock Text="{Binding DeviceStatus}" VerticalAlignment="Center" Opacity="0.8" />
+                <ToggleSwitch IsChecked="{Binding IsDarkTheme}" OnContent="Escuro" OffContent="Claro" 
+                              Command="{Binding SwitchThemeCommand}" CommandParameter="{Binding IsDarkTheme}" />
+            </StackPanel>
+        </Grid>
+        
+        <!-- Conteúdo Principal -->
+        <Grid Grid.Row="1" ColumnDefinitions="3*,2*" Margin="0">
+            <!-- Painel de Transferências -->
+            <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto" Margin="0,0,12,0">
+                <!-- Área de Drag-and-Drop -->
+                <Border Grid.Row="0" x:Name="DragDropBorder" Classes="DropArea" Margin="0,0,0,8" Cursor="Hand">
+                    <Grid RowDefinitions="Auto,Auto" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Grid.Row="0" Text="📁 Arraste arquivos ou pastas aqui" 
+                                  FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        <TextBlock Grid.Row="1" Text="ou use o botão 'Adicionar Arquivos'" 
+                                  FontSize="12" HorizontalAlignment="Center" Opacity="0.7" Margin="0,4,0,0" />
+                    </Grid>
+                </Border>
+                
+                <!-- Lista de Transferências -->
+                <DataGrid Grid.Row="1" 
+                          ItemsSource="{Binding TransferItems}" 
+                          AutoGenerateColumns="False" 
+                          IsReadOnly="True"
+                          GridLinesVisibility="Horizontal"
+                          BorderThickness="1"
+                          CornerRadius="4">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Arquivo" Binding="{Binding SourcePath}" Width="*" />
+                        <DataGridTextColumn Header="Tamanho" Binding="{Binding FormattedFileSize}" Width="100" />
+                        <DataGridTextColumn Header="Progresso" Binding="{Binding ProgressPercentage, StringFormat={}{0:F1}%}" Width="90" />
+                        <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="100" />
+                        <DataGridTextColumn Header="Velocidade" Binding="{Binding TransferSpeed, StringFormat={}{0:F1} MB/s}" Width="100" />
+                        <DataGridTextColumn Header="Tempo Restante" Binding="{Binding EstimatedTimeRemaining, StringFormat={}{0:hh\\:mm\\:ss}}" Width="110" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                
+                <!-- Estatísticas -->
+                <Grid Grid.Row="2" ColumnDefinitions="*,*,*,*" Margin="0,8,0,0">
+                    <Border Grid.Column="0" Background="{DynamicResource SystemControlBackgroundAltMediumBrush}" Padding="8" Margin="2" CornerRadius="4">
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Text="Arquivos Totais" FontSize="11" Opacity="0.7" />
+                            <TextBlock Text="{Binding TotalFiles}" FontSize="15" FontWeight="Bold" />
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Background="{DynamicResource SystemControlBackgroundAltMediumBrush}" Padding="8" Margin="2" CornerRadius="4">
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Text="Bytes Totais" FontSize="11" Opacity="0.7" />
+                            <TextBlock Text="{Binding TotalBytes}" FontSize="15" FontWeight="Bold" />
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Background="{DynamicResource SystemControlBackgroundAltMediumBrush}" Padding="8" Margin="2" CornerRadius="4">
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Text="Concluídos" FontSize="11" Opacity="0.7" />
+                            <TextBlock Text="{Binding CompletedFiles}" FontSize="15" FontWeight="Bold" />
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="3" Background="{DynamicResource SystemControlBackgroundAltMediumBrush}" Padding="8" Margin="2" CornerRadius="4">
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Text="Transferidos" FontSize="11" Opacity="0.7" />
+                            <TextBlock Text="{Binding TransferredBytes}" FontSize="15" FontWeight="Bold" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Grid>
+            
+            <!-- Painel Lateral -->
+            <Grid Grid.Column="1" RowDefinitions="*,Auto">
+                <!-- Painel de Log -->
+                <controls:LogPanel Grid.Row="0" Logs="{Binding LogEntries}" />
+                
+                <!-- Painel de Progresso -->
+                <controls:ProgressPanel Grid.Row="1" 
+                                       OverallProgress="{Binding OverallProgress}"
+                                       StatusMessage="{Binding StatusMessage}"
+                                       TransferStartTime="{Binding TransferStartTime}"
+                                       TransferEndTime="{Binding TransferEndTime}" />
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>
