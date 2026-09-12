@@ -57,18 +57,18 @@
             </Setter>
         </Style>
 
-        <!-- Glow Transfer Button -->
+        <!-- Glow Transfer Button Base -->
         <Style x:Key="GlowButton" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Height" Value="50"/>
+            <Setter Property="Height" Value="46"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="12" Padding="20,8"
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="12" Padding="16,8"
                                 BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
                             <Border.Effect>
                                 <DropShadowEffect ShadowDepth="0" BlurRadius="15" Color="#0066FF" Opacity="0.4"/>
@@ -79,7 +79,7 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Effect">
                                     <Setter.Value>
-                                        <DropShadowEffect ShadowDepth="0" BlurRadius="25" Color="#0088FF" Opacity="0.7"/>
+                                        <DropShadowEffect ShadowDepth="0" BlurRadius="22" Color="#0088FF" Opacity="0.7"/>
                                     </Setter.Value>
                                 </Setter>
                             </Trigger>
@@ -103,22 +103,40 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Height" Value="28"/>
-            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="Padding" Value="24,4,6,4"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="CaretBrush" Value="{StaticResource NeonCyan}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
                         <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" 
-                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
-                            <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center"/>
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
+                            <Grid VerticalAlignment="Center">
+                                <TextBlock Text="Filtrar..." Foreground="{StaticResource TextMuted}" FontSize="11"
+                                           Margin="24,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource TemplatedParent}}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource TemplatedParent}}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" Margin="0"/>
+                            </Grid>
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
 
-        <!-- Dark Pill Badge -->
+        <!-- Dark Metric Badge Pill -->
         <Style x:Key="MetricBadge" TargetType="Border">
             <Setter Property="Background" Value="#0D1B30"/>
             <Setter Property="BorderBrush" Value="{StaticResource CardBorder}"/>
@@ -167,13 +185,13 @@
         <Style x:Key="FileRowStyle" TargetType="ListViewItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
-            <Setter Property="Padding" Value="0,2"/>
+            <Setter Property="Padding" Value="0,3"/>
             <Setter Property="Margin" Value="0"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListViewItem">
-                        <Border x:Name="Bd" Background="Transparent" BorderBrush="Transparent" 
+                        <Border x:Name="Bd" Background="Transparent" BorderBrush="#0B1A30"
                                 BorderThickness="0,0,0,1" Padding="{TemplateBinding Padding}">
                             <GridViewRowPresenter VerticalAlignment="Center"/>
                         </Border>
@@ -287,7 +305,7 @@
 
                 <!-- Logo + Title -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Shield Icon with Glow -->
+                    <!-- Shield Icon with 3D Cyan/Blue Glow -->
                     <Border Width="42" Height="42" CornerRadius="10" Margin="0,0,12,0">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -303,13 +321,12 @@
                     </Border>
 
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="PRESERVA METADADOS" FontSize="20" FontWeight="ExtraBold" Foreground="White"
-                                   LetterSpacing="0"/>
+                        <TextBlock Text="PRESERVA METADADOS" FontSize="20" FontWeight="ExtraBold" Foreground="White"/>
                         <TextBlock Text="SEGURANÇA • INTEGRIDADE • LONGO PRAZO" FontSize="9" Foreground="{StaticResource TextSecondary}"
-                                   Margin="0,1,0,0" LetterSpacing="0"/>
+                                   Margin="0,1,0,0"/>
                     </StackPanel>
 
-                    <!-- Badge -->
+                    <!-- App Badge -->
                     <Border Background="#0D1B30" CornerRadius="6" Padding="10,4" Margin="14,0,0,0" VerticalAlignment="Center"
                             BorderBrush="{StaticResource CardBorder}" BorderThickness="1">
                         <TextBlock Text="DUAL-PANE MANAGER" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondary}"/>
@@ -343,7 +360,7 @@
 
                 <!-- Actions Right -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Settings -->
+                    <!-- Settings Gear Icon -->
                     <Button Style="{StaticResource NavIconButton}" ToolTip="Configurações" Width="36" Height="36" Margin="0,0,8,0">
                         <materialDesign:PackIcon Kind="CogOutline" Width="20" Height="20" Foreground="{StaticResource TextSecondary}"/>
                     </Button>
@@ -413,13 +430,13 @@
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
 
-                            <!-- Online dot -->
+                            <!-- Online Status Dot -->
                             <Ellipse Width="8" Height="8" Fill="#00E676" Margin="4,0,6,0" VerticalAlignment="Center">
                                 <Ellipse.Effect>
                                     <DropShadowEffect ShadowDepth="0" BlurRadius="6" Color="#00E676" Opacity="0.8"/>
                                 </Ellipse.Effect>
                             </Ellipse>
-                            <TextBlock Text="Dispositivo MTP" FontSize="10" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Online" FontSize="10" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"/>
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -438,7 +455,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Breadcrumbs + Search -->
+                    <!-- Breadcrumbs + Search Bar -->
                     <Grid Grid.Row="1" Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -469,7 +486,7 @@
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                             <Grid>
                                 <TextBox Style="{StaticResource DarkSearchBox}" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                         Width="130" Padding="24,4,6,4"/>
+                                         Width="130"/>
                                 <materialDesign:PackIcon Kind="Magnify" Width="14" Height="14" Foreground="{StaticResource TextMuted}"
                                                          HorizontalAlignment="Left" VerticalAlignment="Center" Margin="6,0,0,0" IsHitTestVisible="False"/>
                             </Grid>
@@ -479,7 +496,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- File List -->
+                    <!-- File List DataGrid / ListView -->
                     <Grid Grid.Row="2">
                         <ListView ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
                                   Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimary}"
@@ -489,7 +506,7 @@
                                   MouseDoubleClick="SourceList_MouseDoubleClick">
                             <ListView.View>
                                 <GridView ColumnHeaderContainerStyle="{StaticResource DarkColumnHeader}">
-                                    <!-- Checkbox -->
+                                    <!-- Selection Checkbox -->
                                     <GridViewColumn Width="35">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
@@ -533,7 +550,7 @@
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
 
-                                    <!-- Chevron -->
+                                    <!-- Chevron '>' Icon -->
                                     <GridViewColumn Width="30">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
@@ -608,7 +625,7 @@
                     </Button.Background>
                     <StackPanel Orientation="Horizontal">
                         <materialDesign:PackIcon Kind="ArrowLeft" Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Copiar para Origem" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                        <TextBlock Text="← Copiar para Origem" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
@@ -679,16 +696,13 @@
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
 
+                            <!-- Online Status Dot -->
                             <Ellipse Width="8" Height="8" Fill="#00E676" Margin="4,0,6,0" VerticalAlignment="Center">
                                 <Ellipse.Effect>
                                     <DropShadowEffect ShadowDepth="0" BlurRadius="6" Color="#00E676" Opacity="0.8"/>
                                 </Ellipse.Effect>
                             </Ellipse>
-                            <TextBlock FontSize="10" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center">
-                                <TextBlock.Text>
-                                    <Binding Path="SelectedDevice.CapacityInfo" FallbackValue="" StringFormat="{}{0}"/>
-                                </TextBlock.Text>
-                            </TextBlock>
+                            <TextBlock Text="Online" FontSize="10" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"/>
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -707,7 +721,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Breadcrumbs + Search -->
+                    <!-- Breadcrumbs + Search Bar -->
                     <Grid Grid.Row="1" Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -738,7 +752,7 @@
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                             <Grid>
                                 <TextBox Style="{StaticResource DarkSearchBox}" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                         Width="130" Padding="24,4,6,4"/>
+                                         Width="130"/>
                                 <materialDesign:PackIcon Kind="Magnify" Width="14" Height="14" Foreground="{StaticResource TextMuted}"
                                                          HorizontalAlignment="Left" VerticalAlignment="Center" Margin="6,0,0,0" IsHitTestVisible="False"/>
                             </Grid>
@@ -748,7 +762,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- File List -->
+                    <!-- File List DataGrid / ListView -->
                     <Grid Grid.Row="2">
                         <ListView ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
                                   Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimary}"
@@ -758,7 +772,7 @@
                                   MouseDoubleClick="DestList_MouseDoubleClick">
                             <ListView.View>
                                 <GridView ColumnHeaderContainerStyle="{StaticResource DarkColumnHeader}">
-                                    <!-- Checkbox -->
+                                    <!-- Selection Checkbox -->
                                     <GridViewColumn Width="35">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
@@ -802,7 +816,7 @@
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
 
-                                    <!-- Chevron -->
+                                    <!-- Chevron '>' Icon -->
                                     <GridViewColumn Width="30">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
@@ -862,8 +876,8 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Neon top line -->
-                <Border Grid.Row="0" Height="2" CornerRadius="1,1,0,0" Background="{StaticResource NeonProgressGradient}" Opacity="0.6"/>
+                <!-- Neon Glowing Line on Top Edge -->
+                <Border Grid.Row="0" Height="2" CornerRadius="1,1,0,0" Background="{StaticResource NeonProgressGradient}" Opacity="0.85"/>
 
                 <!-- Row 1: Status + Cancel -->
                 <Grid Grid.Row="1" Margin="16,10,16,6">
@@ -875,7 +889,6 @@
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <materialDesign:PackIcon Kind="SwapHorizontal" Width="22" Height="22" Foreground="{StaticResource NeonCyan}" 
                                                  Margin="0,0,10,0" VerticalAlignment="Center"/>
-                        <!-- Green dot -->
                         <Ellipse Width="8" Height="8" Fill="#00E676" Margin="0,0,8,0" VerticalAlignment="Center">
                             <Ellipse.Effect>
                                 <DropShadowEffect ShadowDepth="0" BlurRadius="5" Color="#00E676" Opacity="0.7"/>
@@ -900,16 +913,16 @@
                     </Button>
                 </Grid>
 
-                <!-- Row 2: Metrics + Progress -->
+                <!-- Row 2: Metrics + Progress Bar -->
                 <Grid Grid.Row="2" Margin="16,4,16,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Metric Badges -->
+                    <!-- Metric Badges in Dark Pill Format -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
-                        <!-- Speed -->
+                        <!-- Speed Metric -->
                         <Border Style="{StaticResource MetricBadge}">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="Speedometer" Width="15" Height="15" Foreground="{StaticResource NeonCyan}" 
@@ -920,7 +933,7 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- ETA -->
+                        <!-- ETA Metric -->
                         <Border Style="{StaticResource MetricBadge}">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="ClockOutline" Width="15" Height="15" Foreground="{StaticResource NeonYellow}" 
@@ -931,7 +944,7 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- File Count -->
+                        <!-- File Count Metric -->
                         <Border Style="{StaticResource MetricBadge}">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="FileDocumentOutline" Width="15" Height="15" Foreground="{StaticResource NeonGreen}" 
@@ -953,14 +966,8 @@
                                 <Run Text="{Binding TransferProgress.OverallPercentage, StringFormat={}{0:0}%, Mode=OneWay}"/>
                             </TextBlock>
                         </DockPanel>
-                        <Border CornerRadius="4" Background="#0D1B30" Height="8">
-                            <Border CornerRadius="4" HorizontalAlignment="Left" Background="{StaticResource NeonProgressGradient}"
-                                    Width="{Binding TransferProgress.OverallPercentage, Converter={x:Static converters:InverseBooleanConverter.Instance}, FallbackValue=0}">
-                            </Border>
-                        </Border>
-                        <!-- Simple ProgressBar fallback -->
-                        <ProgressBar Value="{Binding TransferProgress.OverallPercentage}" Minimum="0" Maximum="100" Height="6" 
-                                     Background="#0D1B30" Foreground="{StaticResource NeonCyan}" Margin="0,2,0,0"
+                        <ProgressBar Value="{Binding TransferProgress.OverallPercentage}" Minimum="0" Maximum="100" Height="8"
+                                     Background="#0D1B30" Foreground="{StaticResource NeonCyan}"
                                      BorderThickness="0"/>
                     </StackPanel>
                 </Grid>
