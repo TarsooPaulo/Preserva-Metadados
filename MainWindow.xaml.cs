@@ -13,6 +13,29 @@ public partial class MainWindow : Window
         DataContext = new MainViewModel();
     }
 
+    private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left)
+        {
+            DragMove();
+        }
+    }
+
+    private void MinimizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void MaximizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    }
+
+    private void CloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
     private void SourceList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (DataContext is MainViewModel vm && vm.SourcePane.SelectedItem != null)
