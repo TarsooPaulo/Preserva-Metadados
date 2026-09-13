@@ -10,6 +10,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        MaxHeight = SystemParameters.WorkArea.Height;
+        WindowState = WindowState.Maximized;
         DataContext = new MainViewModel();
     }
 

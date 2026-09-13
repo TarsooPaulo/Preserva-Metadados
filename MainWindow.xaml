@@ -12,6 +12,8 @@
         Title="Preserva Metadados - Gerenciador de Arquivos Dual-Pane com Transferência Nativa"
         Height="800" Width="1360"
         MinHeight="650" MinWidth="1050"
+        WindowState="Maximized"
+        MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource AppBackground}"
         Foreground="{StaticResource TextPrimary}">
