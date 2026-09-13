@@ -28,4 +28,31 @@ public partial class MainWindow : Window
             _ = vm.DestinationPane.OpenItemAsync(vm.DestinationPane.SelectedItem);
         }
     }
+
+    // Arrasto de janela ao clicar no cabeçalho
+    private void Header_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left)
+            this.DragMove();
+    }
+
+    // Botão Minimizar
+    private void BtnMinimize_Click(object sender, RoutedEventArgs e)
+    {
+        this.WindowState = WindowState.Minimized;
+    }
+
+    // Botão Maximizar / Restaurar
+    private void BtnMaximize_Click(object sender, RoutedEventArgs e)
+    {
+        this.WindowState = (this.WindowState == WindowState.Maximized)
+            ? WindowState.Normal
+            : WindowState.Maximized;
+    }
+
+    // Botão Fechar
+    private void BtnClose_Click(object sender, RoutedEventArgs e)
+    {
+        this.Close();
+    }
 }
