@@ -10,6 +10,7 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MainViewModel}"
         Title="Preserva Metadados - Gerenciador de Arquivos Dual-Pane com Transferência Nativa"
+        Icon="Assets/app_icon.ico"
         Height="800" Width="1360"
         MinHeight="650" MinWidth="1050"
         WindowStartupLocation="CenterScreen"
