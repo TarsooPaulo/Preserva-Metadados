@@ -62,6 +62,35 @@ public class FileTransferService
         }
     }
 
+    private static void UploadFileToMtp(MediaDevice device, string localSourceFilePath, string mtpDestinationPath, bool overwrite = true)
+    {
+        var destDir = GetMtpParentDirectory(mtpDestinationPath);
+        EnsureMtpDirectoryExists(device, destDir);
+
+        // Se o arquivo já existir no destino MTP e overwrite estiver ativado, exclui o arquivo antes de enviar
+        if (device.FileExists(mtpDestinationPath))
+        {
+            if (overwrite)
+            {
+                try
+                {
+                    device.DeleteFile(mtpDestinationPath);
+                }
+                catch
+                {
+                    // Tenta prosseguir com o upload caso DeleteFile falhe ou não seja suportado
+                }
+            }
+            else
+            {
+                return; // Se não for overwrite e já existir, pula
+            }
+        }
+
+        // Fazer upload para a pasta de destino
+        device.UploadFile(localSourceFilePath, destDir);
+    }
+
     public async Task TransferItemsAsync(
         IReadOnlyList<FileItem> items,
         string destinationDirectory,
@@ -380,10 +409,8 @@ public class FileTransferService
             using (device)
             {
                 device.Connect();
-                var destDir = GetMtpParentDirectory(entry.DestinationPath);
-                EnsureMtpDirectoryExists(device, destDir);
 
-                device.UploadFile(entry.SourceItem.FullPath, destDir);
+                UploadFileToMtp(device, entry.SourceItem.FullPath, entry.DestinationPath, overwrite: true);
 
                 // Tentar restaurar metadados no objeto MTP gravado
                 try
@@ -487,10 +514,7 @@ public class FileTransferService
                 {
                     destDevice.Connect();
 
-                    var destDir = GetMtpParentDirectory(entry.DestinationPath);
-                    EnsureMtpDirectoryExists(destDevice, destDir);
-
-                    destDevice.UploadFile(tempFilePath, destDir);
+                    UploadFileToMtp(destDevice, tempFilePath, entry.DestinationPath, overwrite: true);
 
                     // Restauração de Metadados: Garantir CreationTime e LastWriteTime originais no MTP de destino
                     try

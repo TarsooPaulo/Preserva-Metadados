@@ -16,6 +16,9 @@ public class FileTransferServiceTests
 
         var result3 = FileTransferService.CombineMtpPath("", "Pasta");
         Assert.Equal("Pasta", result3);
+
+        var result4 = FileTransferService.CombineMtpPath(@"\Cartão SD\Music\Snaptube Audio", "VAI LENTA (Super Slowed)(MP3_320K).mp3");
+        Assert.Equal(@"\Cartão SD\Music\Snaptube Audio\VAI LENTA (Super Slowed)(MP3_320K).mp3", result4);
     }
 
     [Fact]
@@ -32,5 +35,8 @@ public class FileTransferServiceTests
 
         var parent4 = FileTransferService.GetMtpParentDirectory(@"\");
         Assert.Equal(@"\", parent4);
+
+        var parent5 = FileTransferService.GetMtpParentDirectory(@"\Cartão SD\Music\Snaptube Audio\VAI LENTA (Super Slowed)(MP3_320K).mp3");
+        Assert.Equal(@"\Cartão SD\Music\Snaptube Audio", parent5);
     }
 }
