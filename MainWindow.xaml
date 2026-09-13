@@ -10,8 +10,8 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MainViewModel}"
         Title="Preserva Metadados - Gerenciador de Arquivos Dual-Pane com Transferência Nativa"
-        Height="800" Width="1360"
-        MinHeight="650" MinWidth="1050"
+        Width="1280" Height="800"
+        MinWidth="1024" MinHeight="680"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource AppBackground}"
         Foreground="{StaticResource TextPrimary}">
@@ -383,11 +383,11 @@
         <Grid Grid.Row="1" Margin="12,10,12,6">
             <Grid.ColumnDefinitions>
                 <!-- Painel Origem -->
-                <ColumnDefinition Width="*" MinWidth="380"/>
+                <ColumnDefinition Width="*" MinWidth="300"/>
                 <!-- Ações Centrais -->
-                <ColumnDefinition Width="180"/>
+                <ColumnDefinition Width="Auto" MinWidth="150" MaxWidth="180"/>
                 <!-- Painel Destino -->
-                <ColumnDefinition Width="*" MinWidth="380"/>
+                <ColumnDefinition Width="*" MinWidth="300"/>
             </Grid.ColumnDefinitions>
 
             <!-- ══════════════════════════════════════════════ -->
@@ -501,7 +501,7 @@
                         <ListView ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
                                   Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimary}"
                                   ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                   ItemContainerStyle="{StaticResource FileRowStyle}"
                                   MouseDoubleClick="SourceList_MouseDoubleClick">
                             <ListView.View>
@@ -767,7 +767,7 @@
                         <ListView ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
                                   Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimary}"
                                   ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                   ItemContainerStyle="{StaticResource FileRowStyle}"
                                   MouseDoubleClick="DestList_MouseDoubleClick">
                             <ListView.View>
@@ -921,7 +921,7 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Metric Badges in Dark Pill Format -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
+                    <WrapPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
                         <!-- Speed Metric -->
                         <Border Style="{StaticResource MetricBadge}">
                             <StackPanel Orientation="Horizontal">
@@ -955,7 +955,7 @@
                                 </TextBlock>
                             </StackPanel>
                         </Border>
-                    </StackPanel>
+                    </WrapPanel>
 
                     <!-- Progress Bar -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
