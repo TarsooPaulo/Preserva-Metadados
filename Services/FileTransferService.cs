@@ -9,6 +9,59 @@ public class FileTransferService
 {
     private const int BufferSize = 1024 * 1024; // 1 MB buffer para máxima performance
 
+    public static string CombineMtpPath(string path1, string path2)
+    {
+        if (string.IsNullOrEmpty(path1)) return path2 ?? string.Empty;
+        if (string.IsNullOrEmpty(path2)) return path1 ?? string.Empty;
+
+        var p1 = path1.TrimEnd('\\', '/');
+        var p2 = path2.TrimStart('\\', '/');
+
+        if (string.IsNullOrEmpty(p1)) return @"\" + p2;
+        return $"{p1}\\{p2}";
+    }
+
+    public static string GetMtpParentDirectory(string mtpPath)
+    {
+        if (string.IsNullOrWhiteSpace(mtpPath) || mtpPath == @"\" || mtpPath == "/")
+            return @"\";
+
+        var normalized = mtpPath.Replace('/', '\\').TrimEnd('\\');
+        var lastSlash = normalized.LastIndexOf('\\');
+        if (lastSlash <= 0) return @"\";
+        return normalized.Substring(0, lastSlash);
+    }
+
+    private static void EnsureMtpDirectoryExists(MediaDevice device, string targetDir)
+    {
+        if (string.IsNullOrWhiteSpace(targetDir) || targetDir == @"\" || targetDir == "/")
+            return;
+
+        if (device.DirectoryExists(targetDir))
+            return;
+
+        var normalized = targetDir.Replace('/', '\\').Trim('\\');
+        var parts = normalized.Split('\\', StringSplitOptions.RemoveEmptyEntries);
+        var currentPath = @"\";
+
+        foreach (var part in parts)
+        {
+            var nextPath = CombineMtpPath(currentPath, part);
+            if (!device.DirectoryExists(nextPath))
+            {
+                try
+                {
+                    device.CreateDirectory(nextPath);
+                }
+                catch
+                {
+                    // Se já existir ou falhar por outra razão, continua
+                }
+            }
+            currentPath = nextPath;
+        }
+    }
+
     public async Task TransferItemsAsync(
         IReadOnlyList<FileItem> items,
         string destinationDirectory,
@@ -40,7 +93,7 @@ public class FileTransferService
                 }
                 else
                 {
-                    var destFile = Path.Combine(destinationDirectory, item.Name);
+                    var destFile = CombineMtpPath(destinationDirectory, item.Name);
                     fileEntries.Add(new TransferQueueItem
                     {
                         SourceItem = item,
@@ -85,41 +138,69 @@ public class FileTransferService
             progressInfo.StatusMessage = $"Copiando: {entry.SourceItem.Name} ({i + 1}/{fileEntries.Count})";
             progress.Report(progressInfo);
 
-            if (entry.SourceItem.IsMtp)
+            try
             {
-                // MTP -> PC Local
-                await CopyMtpToLocalAsync(entry, (bytesChunk) =>
+                if (entry.SourceItem.IsMtp && destIsMtp)
                 {
-                    totalBytesCopied += bytesChunk;
-                    progressInfo.BytesTransferred = totalBytesCopied;
-                    progressInfo.CurrentFileBytes += bytesChunk;
+                    // MTP -> MTP (Armazenamento Interno -> Cartão SD ou entre Dispositivos/Pastas MTP) via Buffer Temporário
+                    await CopyMtpToMtpViaTempAsync(entry, destMtpDeviceId!, (bytesChunk) =>
+                    {
+                        totalBytesCopied += bytesChunk;
+                        progressInfo.BytesTransferred = totalBytesCopied;
+                        progressInfo.CurrentFileBytes += bytesChunk;
 
-                    UpdateMetrics(progressInfo, speedStopwatch, ref lastSpeedCalcBytes, ref currentSpeed, totalBytesCopied, totalBytes);
-                    progress.Report(progressInfo);
-                }, cancellationToken);
-            }
-            else if (destIsMtp)
-            {
-                // PC Local -> MTP
-                await CopyLocalToMtpAsync(entry, destMtpDeviceId!, cancellationToken);
-                totalBytesCopied += entry.Length;
-                progressInfo.BytesTransferred = totalBytesCopied;
-                progressInfo.CurrentFileBytes = entry.Length;
-                progressInfo.FilePercentage = 100;
-                progress.Report(progressInfo);
-            }
-            else
-            {
-                // PC Local -> PC Local (HD, SSD, Pendrive, Rede)
-                await CopyLocalToLocalWithMetadataAsync(entry, (bytesChunk) =>
+                        UpdateMetrics(progressInfo, speedStopwatch, ref lastSpeedCalcBytes, ref currentSpeed, totalBytesCopied, totalBytes);
+                        progress.Report(progressInfo);
+                    }, cancellationToken);
+                }
+                else if (entry.SourceItem.IsMtp)
                 {
-                    totalBytesCopied += bytesChunk;
-                    progressInfo.BytesTransferred = totalBytesCopied;
-                    progressInfo.CurrentFileBytes += bytesChunk;
+                    // MTP -> PC Local
+                    await CopyMtpToLocalAsync(entry, (bytesChunk) =>
+                    {
+                        totalBytesCopied += bytesChunk;
+                        progressInfo.BytesTransferred = totalBytesCopied;
+                        progressInfo.CurrentFileBytes += bytesChunk;
 
-                    UpdateMetrics(progressInfo, speedStopwatch, ref lastSpeedCalcBytes, ref currentSpeed, totalBytesCopied, totalBytes);
+                        UpdateMetrics(progressInfo, speedStopwatch, ref lastSpeedCalcBytes, ref currentSpeed, totalBytesCopied, totalBytes);
+                        progress.Report(progressInfo);
+                    }, cancellationToken);
+                }
+                else if (destIsMtp)
+                {
+                    // PC Local -> MTP
+                    await CopyLocalToMtpAsync(entry, destMtpDeviceId!, cancellationToken);
+                    totalBytesCopied += entry.Length;
+                    progressInfo.BytesTransferred = totalBytesCopied;
+                    progressInfo.CurrentFileBytes = entry.Length;
+                    progressInfo.FilePercentage = 100;
                     progress.Report(progressInfo);
-                }, cancellationToken);
+                }
+                else
+                {
+                    // PC Local -> PC Local (HD, SSD, Pendrive, Rede)
+                    await CopyLocalToLocalWithMetadataAsync(entry, (bytesChunk) =>
+                    {
+                        totalBytesCopied += bytesChunk;
+                        progressInfo.BytesTransferred = totalBytesCopied;
+                        progressInfo.CurrentFileBytes += bytesChunk;
+
+                        UpdateMetrics(progressInfo, speedStopwatch, ref lastSpeedCalcBytes, ref currentSpeed, totalBytesCopied, totalBytes);
+                        progress.Report(progressInfo);
+                    }, cancellationToken);
+                }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                throw new UnauthorizedAccessException($"Acesso negado ao transferir '{entry.SourceItem.Name}': {ex.Message}", ex);
+            }
+            catch (DirectoryNotFoundException ex)
+            {
+                throw new DirectoryNotFoundException($"Caminho ou diretório não encontrado para '{entry.SourceItem.Name}': {ex.Message}", ex);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                throw new Exception($"Falha ao transferir '{entry.SourceItem.Name}': {ex.Message}", ex);
             }
 
             // Atualiza progresso geral após o arquivo concluído
@@ -240,7 +321,10 @@ public class FileTransferService
         {
             var devices = MediaDeviceManager.Instance?.GetDevices();
             var device = devices?.FirstOrDefault(d => d.DeviceId == deviceId);
-            if (device == null) return;
+            if (device == null)
+            {
+                throw new InvalidOperationException($"Dispositivo MTP de origem não encontrado (ID: {deviceId}).");
+            }
 
             using (device)
             {
@@ -251,7 +335,7 @@ public class FileTransferService
                     device.DownloadFile(item.FullPath, memoryStream);
                     memoryStream.Position = 0;
 
-                    using (var destStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    using (var destStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, FileOptions.Asynchronous))
                     {
                         byte[] buffer = new byte[BufferSize];
                         int read;
@@ -288,16 +372,160 @@ public class FileTransferService
         {
             var devices = MediaDeviceManager.Instance?.GetDevices();
             var device = devices?.FirstOrDefault(d => d.DeviceId == mtpDeviceId);
-            if (device == null) return;
+            if (device == null)
+            {
+                throw new InvalidOperationException($"Dispositivo MTP de destino não encontrado (ID: {mtpDeviceId}).");
+            }
 
             using (device)
             {
                 device.Connect();
-                var destDir = Path.GetDirectoryName(entry.DestinationPath) ?? @"\";
+                var destDir = GetMtpParentDirectory(entry.DestinationPath);
+                EnsureMtpDirectoryExists(device, destDir);
+
                 device.UploadFile(entry.SourceItem.FullPath, destDir);
+
+                // Tentar restaurar metadados no objeto MTP gravado
+                try
+                {
+                    var uploadedMtpPath = entry.DestinationPath;
+                    if (device.FileExists(uploadedMtpPath))
+                    {
+                        var info = device.GetFileInfo(uploadedMtpPath);
+                        if (info != null)
+                        {
+                            if (entry.SourceItem.CreationTimeUtc.HasValue)
+                                info.CreationTime = entry.SourceItem.CreationTimeUtc.Value.ToLocalTime();
+                            if (entry.SourceItem.LastWriteTimeUtc.HasValue)
+                                info.LastWriteTime = entry.SourceItem.LastWriteTimeUtc.Value.ToLocalTime();
+                        }
+                    }
+                }
+                catch { }
+
                 device.Disconnect();
             }
         }, cancellationToken);
+    }
+
+    private async Task CopyMtpToMtpViaTempAsync(
+        TransferQueueItem entry,
+        string destMtpDeviceId,
+        Action<int> onBytesRead,
+        CancellationToken cancellationToken)
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "PreservaMetadadosTemp");
+        if (!Directory.Exists(tempDir))
+        {
+            Directory.CreateDirectory(tempDir);
+        }
+
+        var tempFilePath = Path.Combine(tempDir, $"temp_{Guid.NewGuid():N}_{entry.SourceItem.Name}");
+
+        try
+        {
+            // Passo 1: Baixar do MTP de Origem para arquivo temporário do sistema no PC
+            var sourceDeviceId = entry.SourceItem.MtpDeviceId;
+            await Task.Run(() =>
+            {
+                var devices = MediaDeviceManager.Instance?.GetDevices();
+                var sourceDevice = devices?.FirstOrDefault(d => d.DeviceId == sourceDeviceId);
+                if (sourceDevice == null)
+                {
+                    throw new InvalidOperationException($"Dispositivo MTP de origem não encontrado (ID: {sourceDeviceId}).");
+                }
+
+                using (sourceDevice)
+                {
+                    sourceDevice.Connect();
+
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        sourceDevice.DownloadFile(entry.SourceItem.FullPath, memoryStream);
+                        memoryStream.Position = 0;
+
+                        using (var destStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, FileOptions.Asynchronous))
+                        {
+                            byte[] buffer = new byte[BufferSize];
+                            int read;
+                            while ((read = memoryStream.Read(buffer, 0, buffer.Length)) > 0)
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+                                destStream.Write(buffer, 0, read);
+                                onBytesRead(read);
+                            }
+                        }
+                    }
+
+                    sourceDevice.Disconnect();
+                }
+
+                // Preservar datas no arquivo temporário local
+                try
+                {
+                    if (entry.SourceItem.CreationTimeUtc.HasValue)
+                        File.SetCreationTimeUtc(tempFilePath, entry.SourceItem.CreationTimeUtc.Value);
+                    if (entry.SourceItem.LastWriteTimeUtc.HasValue)
+                        File.SetLastWriteTimeUtc(tempFilePath, entry.SourceItem.LastWriteTimeUtc.Value);
+                }
+                catch { }
+            }, cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Passo 2: Enviar do arquivo temporário para o Cartão SD / MTP de Destino
+            await Task.Run(() =>
+            {
+                var devices = MediaDeviceManager.Instance?.GetDevices();
+                var destDevice = devices?.FirstOrDefault(d => d.DeviceId == destMtpDeviceId);
+                if (destDevice == null)
+                {
+                    throw new InvalidOperationException($"Dispositivo MTP de destino não encontrado (ID: {destMtpDeviceId}).");
+                }
+
+                using (destDevice)
+                {
+                    destDevice.Connect();
+
+                    var destDir = GetMtpParentDirectory(entry.DestinationPath);
+                    EnsureMtpDirectoryExists(destDevice, destDir);
+
+                    destDevice.UploadFile(tempFilePath, destDir);
+
+                    // Restauração de Metadados: Garantir CreationTime e LastWriteTime originais no MTP de destino
+                    try
+                    {
+                        var uploadedMtpPath = entry.DestinationPath;
+                        if (destDevice.FileExists(uploadedMtpPath))
+                        {
+                            var info = destDevice.GetFileInfo(uploadedMtpPath);
+                            if (info != null)
+                            {
+                                if (entry.SourceItem.CreationTimeUtc.HasValue)
+                                    info.CreationTime = entry.SourceItem.CreationTimeUtc.Value.ToLocalTime();
+                                if (entry.SourceItem.LastWriteTimeUtc.HasValue)
+                                    info.LastWriteTime = entry.SourceItem.LastWriteTimeUtc.Value.ToLocalTime();
+                            }
+                        }
+                    }
+                    catch { }
+
+                    destDevice.Disconnect();
+                }
+            }, cancellationToken);
+        }
+        finally
+        {
+            // Passo 3: Apagar o arquivo temporário do PC
+            try
+            {
+                if (File.Exists(tempFilePath))
+                {
+                    File.Delete(tempFilePath);
+                }
+            }
+            catch { }
+        }
     }
 
     private void CollectDirectoryItems(
@@ -309,7 +537,6 @@ public class FileTransferService
     {
         if (dirItem.IsMtp)
         {
-            // MTP Directory
             CollectMtpDirectoryItems(dirItem, baseDestDir, queue, ref totalBytes, cancellationToken);
             return;
         }
@@ -318,14 +545,14 @@ public class FileTransferService
         var dirInfo = new DirectoryInfo(sourceRoot);
         if (!dirInfo.Exists) return;
 
-        var targetDir = Path.Combine(baseDestDir, dirItem.Name);
+        var targetDir = CombineMtpPath(baseDestDir, dirItem.Name);
 
         foreach (var file in dirInfo.EnumerateFiles("*", SearchOption.AllDirectories))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             var relativePath = Path.GetRelativePath(sourceRoot, file.FullName);
-            var destPath = Path.Combine(targetDir, relativePath);
+            var destPath = CombineMtpPath(targetDir, relativePath);
 
             var item = new FileItem
             {
@@ -363,7 +590,7 @@ public class FileTransferService
         using (device)
         {
             device.Connect();
-            var targetDir = Path.Combine(baseDestDir, dirItem.Name);
+            var targetDir = CombineMtpPath(baseDestDir, dirItem.Name);
             CollectMtpRecursive(device, dirItem.FullPath, dirItem.FullPath, targetDir, dirItem.MtpDeviceId, queue, ref totalBytes, cancellationToken);
             device.Disconnect();
         }
@@ -373,7 +600,7 @@ public class FileTransferService
         MediaDevice device,
         string currentMtpDir,
         string rootMtpDir,
-        string targetLocalBase,
+        string targetBaseDir,
         string deviceId,
         List<TransferQueueItem> queue,
         ref long totalBytes,
@@ -388,7 +615,7 @@ public class FileTransferService
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var relPath = f.Substring(rootMtpDir.Length).TrimStart('\\', '/');
-                var destPath = Path.Combine(targetLocalBase, relPath);
+                var destPath = CombineMtpPath(targetBaseDir, relPath);
 
                 long len = 0;
                 DateTime? cTime = null;
@@ -431,12 +658,12 @@ public class FileTransferService
         {
             foreach (var d in dirs)
             {
-                CollectMtpRecursive(device, d, rootMtpDir, targetLocalBase, deviceId, queue, ref totalBytes, cancellationToken);
+                CollectMtpRecursive(device, d, rootMtpDir, targetBaseDir, deviceId, queue, ref totalBytes, cancellationToken);
             }
         }
     }
 
-    private sealed class TransferQueueItem
+    public sealed class TransferQueueItem
     {
         public required FileItem SourceItem { get; set; }
         public required string DestinationPath { get; set; }
