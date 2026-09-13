@@ -85,41 +85,85 @@ public class FileTransferService
             progressInfo.StatusMessage = $"Copiando: {entry.SourceItem.Name} ({i + 1}/{fileEntries.Count})";
             progress.Report(progressInfo);
 
-            if (entry.SourceItem.IsMtp)
+            try
             {
-                // MTP -> PC Local
-                await CopyMtpToLocalAsync(entry, (bytesChunk) =>
+                if (entry.SourceItem.IsMtp && destIsMtp)
                 {
-                    totalBytesCopied += bytesChunk;
-                    progressInfo.BytesTransferred = totalBytesCopied;
-                    progressInfo.CurrentFileBytes += bytesChunk;
+                    // MTP -> MTP (ex: Armazenamento Interno -> Cartão SD) via Buffer Temporário no PC
+                    await CopyMtpToMtpWithBufferAsync(entry, destMtpDeviceId!, (bytesChunk) =>
+                    {
+                        totalBytesCopied += bytesChunk;
+                        progressInfo.BytesTransferred = totalBytesCopied;
+                        progressInfo.CurrentFileBytes += bytesChunk;
 
-                    UpdateMetrics(progressInfo, speedStopwatch, ref lastSpeedCalcBytes, ref currentSpeed, totalBytesCopied, totalBytes);
+                        UpdateMetrics(progressInfo, speedStopwatch, ref lastSpeedCalcBytes, ref currentSpeed, totalBytesCopied, totalBytes);
+                        progress.Report(progressInfo);
+                    }, cancellationToken);
+                }
+                else if (entry.SourceItem.IsMtp)
+                {
+                    // MTP -> PC Local
+                    await CopyMtpToLocalPathAsync(entry.SourceItem, entry.DestinationPath, (bytesChunk) =>
+                    {
+                        totalBytesCopied += bytesChunk;
+                        progressInfo.BytesTransferred = totalBytesCopied;
+                        progressInfo.CurrentFileBytes += bytesChunk;
+
+                        UpdateMetrics(progressInfo, speedStopwatch, ref lastSpeedCalcBytes, ref currentSpeed, totalBytesCopied, totalBytes);
+                        progress.Report(progressInfo);
+                    }, cancellationToken);
+                }
+                else if (destIsMtp)
+                {
+                    // PC Local -> MTP
+                    await CopyLocalToMtpAsync(entry, destMtpDeviceId!, cancellationToken);
+                    totalBytesCopied += entry.Length;
+                    progressInfo.BytesTransferred = totalBytesCopied;
+                    progressInfo.CurrentFileBytes = entry.Length;
+                    progressInfo.FilePercentage = 100;
                     progress.Report(progressInfo);
-                }, cancellationToken);
+                }
+                else
+                {
+                    // PC Local -> PC Local (HD, SSD, Pendrive, Rede)
+                    await CopyLocalToLocalWithMetadataAsync(entry, (bytesChunk) =>
+                    {
+                        totalBytesCopied += bytesChunk;
+                        progressInfo.BytesTransferred = totalBytesCopied;
+                        progressInfo.CurrentFileBytes += bytesChunk;
+
+                        UpdateMetrics(progressInfo, speedStopwatch, ref lastSpeedCalcBytes, ref currentSpeed, totalBytesCopied, totalBytes);
+                        progress.Report(progressInfo);
+                    }, cancellationToken);
+                }
             }
-            else if (destIsMtp)
+            catch (UnauthorizedAccessException uex)
             {
-                // PC Local -> MTP
-                await CopyLocalToMtpAsync(entry, destMtpDeviceId!, cancellationToken);
-                totalBytesCopied += entry.Length;
-                progressInfo.BytesTransferred = totalBytesCopied;
-                progressInfo.CurrentFileBytes = entry.Length;
-                progressInfo.FilePercentage = 100;
+                var errMsg = $"Acesso Negado ao transferir '{entry.SourceItem.Name}': {uex.Message}";
+                progressInfo.StatusMessage = errMsg;
                 progress.Report(progressInfo);
+                throw new UnauthorizedAccessException(errMsg, uex);
             }
-            else
+            catch (DirectoryNotFoundException dex)
             {
-                // PC Local -> PC Local (HD, SSD, Pendrive, Rede)
-                await CopyLocalToLocalWithMetadataAsync(entry, (bytesChunk) =>
-                {
-                    totalBytesCopied += bytesChunk;
-                    progressInfo.BytesTransferred = totalBytesCopied;
-                    progressInfo.CurrentFileBytes += bytesChunk;
-
-                    UpdateMetrics(progressInfo, speedStopwatch, ref lastSpeedCalcBytes, ref currentSpeed, totalBytesCopied, totalBytes);
-                    progress.Report(progressInfo);
-                }, cancellationToken);
+                var errMsg = $"Diretório Não Encontrado ao transferir '{entry.SourceItem.Name}': {dex.Message}";
+                progressInfo.StatusMessage = errMsg;
+                progress.Report(progressInfo);
+                throw new DirectoryNotFoundException(errMsg, dex);
+            }
+            catch (IOException ioex)
+            {
+                var errMsg = $"Erro de I/O (E/S de Arquivo) ao transferir '{entry.SourceItem.Name}': {ioex.Message}";
+                progressInfo.StatusMessage = errMsg;
+                progress.Report(progressInfo);
+                throw new IOException(errMsg, ioex);
+            }
+            catch (Exception ex)
+            {
+                var errMsg = $"Erro na API MTP/Dispositivo ao transferir '{entry.SourceItem.Name}' [{ex.GetType().Name}]: {ex.Message}";
+                progressInfo.StatusMessage = errMsg;
+                progress.Report(progressInfo);
+                throw new InvalidOperationException(errMsg, ex);
             }
 
             // Atualiza progresso geral após o arquivo concluído
@@ -176,6 +220,152 @@ public class FileTransferService
         }
     }
 
+    /// <summary>
+    /// Transferência MTP -> MTP (ex: Armazenamento Interno -> Cartão SD) em 3 Passos via Buffer Temporário
+    /// </summary>
+    private async Task CopyMtpToMtpWithBufferAsync(
+        TransferQueueItem entry,
+        string destMtpDeviceId,
+        Action<int> onBytesRead,
+        CancellationToken cancellationToken)
+    {
+        var tempFileName = $"preserva_tmp_{Guid.NewGuid():N}_{entry.SourceItem.Name}";
+        var tempFilePath = Path.Combine(Path.GetTempPath(), tempFileName);
+
+        try
+        {
+            // Passo 1: Download do MTP Origem para Pasta Temporária do PC
+            await CopyMtpToLocalPathAsync(entry.SourceItem, tempFilePath, onBytesRead, cancellationToken);
+
+            // Passo 2: Upload do Arquivo Temporário para o MTP Destino (Cartão SD ou MTP)
+            var destMtpPath = entry.DestinationPath;
+            var destMtpDir = Path.GetDirectoryName(destMtpPath) ?? @"\";
+
+            await Task.Run(() =>
+            {
+                var devices = MediaDeviceManager.Instance?.GetDevices();
+                var destDevice = devices?.FirstOrDefault(d => d.DeviceId == destMtpDeviceId);
+                if (destDevice == null)
+                {
+                    throw new InvalidOperationException($"Dispositivo MTP de destino (ID: {destMtpDeviceId}) não encontrado ou desconectado.");
+                }
+
+                using (destDevice)
+                {
+                    destDevice.Connect();
+
+                    // Garantir que a árvore de diretórios de destino exista no dispositivo MTP
+                    EnsureMtpDirectoryExists(destDevice, destMtpDir);
+
+                    // Enviar o arquivo temporário para o destino MTP
+                    destDevice.UploadFile(tempFilePath, destMtpDir);
+
+                    // Preservar metadados no arquivo MTP final se suportado pela API MediaDevices
+                    try
+                    {
+                        var uploadedMtpFilePath = Path.Combine(destMtpDir, entry.SourceItem.Name);
+                        if (destDevice.FileExists(uploadedMtpFilePath))
+                        {
+                            var fileInfo = destDevice.GetFileInfo(uploadedMtpFilePath);
+                            if (entry.SourceItem.LastWriteTimeUtc.HasValue && fileInfo != null)
+                            {
+                                fileInfo.LastWriteTime = entry.SourceItem.LastWriteTimeUtc.Value.ToLocalTime();
+                            }
+                            if (entry.SourceItem.CreationTimeUtc.HasValue && fileInfo != null)
+                            {
+                                fileInfo.CreationTime = entry.SourceItem.CreationTimeUtc.Value.ToLocalTime();
+                            }
+                        }
+                    }
+                    catch (Exception metaEx)
+                    {
+                        Debug.WriteLine($"Aviso ao restaurar timestamps MTP no destino: {metaEx.Message}");
+                    }
+
+                    destDevice.Disconnect();
+                }
+            }, cancellationToken);
+        }
+        finally
+        {
+            // Passo 3: Limpeza do arquivo temporário no PC
+            if (File.Exists(tempFilePath))
+            {
+                try
+                {
+                    File.Delete(tempFilePath);
+                }
+                catch (Exception delEx)
+                {
+                    Debug.WriteLine($"Aviso ao excluir arquivo de buffer temporário '{tempFilePath}': {delEx.Message}");
+                }
+            }
+        }
+    }
+
+    private async Task CopyMtpToLocalPathAsync(
+        FileItem sourceItem,
+        string localDestPath,
+        Action<int> onBytesRead,
+        CancellationToken cancellationToken)
+    {
+        var localDir = Path.GetDirectoryName(localDestPath);
+        if (!string.IsNullOrEmpty(localDir) && !Directory.Exists(localDir))
+        {
+            Directory.CreateDirectory(localDir);
+        }
+
+        var deviceId = sourceItem.MtpDeviceId;
+
+        await Task.Run(() =>
+        {
+            var devices = MediaDeviceManager.Instance?.GetDevices();
+            var device = devices?.FirstOrDefault(d => d.DeviceId == deviceId);
+            if (device == null)
+            {
+                throw new InvalidOperationException($"Dispositivo MTP de origem (ID: {deviceId}) não encontrado ou desconectado.");
+            }
+
+            using (device)
+            {
+                device.Connect();
+
+                using (var memoryStream = new MemoryStream())
+                {
+                    device.DownloadFile(sourceItem.FullPath, memoryStream);
+                    memoryStream.Position = 0;
+
+                    using (var destStream = new FileStream(localDestPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    {
+                        byte[] buffer = new byte[BufferSize];
+                        int read;
+                        while ((read = memoryStream.Read(buffer, 0, buffer.Length)) > 0)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            destStream.Write(buffer, 0, read);
+                            onBytesRead(read);
+                        }
+                    }
+                }
+
+                device.Disconnect();
+            }
+
+            // Preservar metadados do MTP no arquivo local
+            try
+            {
+                if (sourceItem.CreationTimeUtc.HasValue)
+                    File.SetCreationTimeUtc(localDestPath, sourceItem.CreationTimeUtc.Value);
+                if (sourceItem.LastWriteTimeUtc.HasValue)
+                    File.SetLastWriteTimeUtc(localDestPath, sourceItem.LastWriteTimeUtc.Value);
+            }
+            catch (Exception metaEx)
+            {
+                Debug.WriteLine($"Aviso ao aplicar metadados no arquivo local '{localDestPath}': {metaEx.Message}");
+            }
+        }, cancellationToken);
+    }
+
     private async Task CopyLocalToLocalWithMetadataAsync(
         TransferQueueItem entry,
         Action<int> onBytesRead,
@@ -218,65 +408,10 @@ public class FileTransferService
             File.SetLastWriteTimeUtc(destPath, lastWriteTimeUtc);
             File.SetLastAccessTimeUtc(destPath, lastAccessTimeUtc);
         }
-        catch { }
-    }
-
-    private async Task CopyMtpToLocalAsync(
-        TransferQueueItem entry,
-        Action<int> onBytesRead,
-        CancellationToken cancellationToken)
-    {
-        var destPath = entry.DestinationPath;
-        var destDir = Path.GetDirectoryName(destPath);
-        if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+        catch (Exception metaEx)
         {
-            Directory.CreateDirectory(destDir);
+            Debug.WriteLine($"Aviso ao restaurar metadados em '{destPath}': {metaEx.Message}");
         }
-
-        var item = entry.SourceItem;
-        var deviceId = item.MtpDeviceId;
-
-        await Task.Run(() =>
-        {
-            var devices = MediaDeviceManager.Instance?.GetDevices();
-            var device = devices?.FirstOrDefault(d => d.DeviceId == deviceId);
-            if (device == null) return;
-
-            using (device)
-            {
-                device.Connect();
-
-                using (var memoryStream = new MemoryStream())
-                {
-                    device.DownloadFile(item.FullPath, memoryStream);
-                    memoryStream.Position = 0;
-
-                    using (var destStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None))
-                    {
-                        byte[] buffer = new byte[BufferSize];
-                        int read;
-                        while ((read = memoryStream.Read(buffer, 0, buffer.Length)) > 0)
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
-                            destStream.Write(buffer, 0, read);
-                            onBytesRead(read);
-                        }
-                    }
-                }
-
-                device.Disconnect();
-            }
-
-            // Preservar metadados do MTP
-            try
-            {
-                if (item.CreationTimeUtc.HasValue)
-                    File.SetCreationTimeUtc(destPath, item.CreationTimeUtc.Value);
-                if (item.LastWriteTimeUtc.HasValue)
-                    File.SetLastWriteTimeUtc(destPath, item.LastWriteTimeUtc.Value);
-            }
-            catch { }
-        }, cancellationToken);
     }
 
     private async Task CopyLocalToMtpAsync(
@@ -288,16 +423,76 @@ public class FileTransferService
         {
             var devices = MediaDeviceManager.Instance?.GetDevices();
             var device = devices?.FirstOrDefault(d => d.DeviceId == mtpDeviceId);
-            if (device == null) return;
+            if (device == null)
+            {
+                throw new InvalidOperationException($"Dispositivo MTP de destino (ID: {mtpDeviceId}) não encontrado ou desconectado.");
+            }
 
             using (device)
             {
                 device.Connect();
                 var destDir = Path.GetDirectoryName(entry.DestinationPath) ?? @"\";
+
+                EnsureMtpDirectoryExists(device, destDir);
+
                 device.UploadFile(entry.SourceItem.FullPath, destDir);
+
+                // Preservar metadados no arquivo MTP final se suportado
+                try
+                {
+                    var uploadedMtpFilePath = Path.Combine(destDir, entry.SourceItem.Name);
+                    if (device.FileExists(uploadedMtpFilePath))
+                    {
+                        var fileInfo = device.GetFileInfo(uploadedMtpFilePath);
+                        if (entry.SourceItem.LastWriteTimeUtc.HasValue && fileInfo != null)
+                        {
+                            fileInfo.LastWriteTime = entry.SourceItem.LastWriteTimeUtc.Value.ToLocalTime();
+                        }
+                        if (entry.SourceItem.CreationTimeUtc.HasValue && fileInfo != null)
+                        {
+                            fileInfo.CreationTime = entry.SourceItem.CreationTimeUtc.Value.ToLocalTime();
+                        }
+                    }
+                }
+                catch (Exception metaEx)
+                {
+                    Debug.WriteLine($"Aviso ao restaurar timestamps MTP no destino: {metaEx.Message}");
+                }
+
                 device.Disconnect();
             }
         }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Garante que o diretório MTP exista, criando todos os níveis pai se necessário.
+    /// </summary>
+    private static void EnsureMtpDirectoryExists(MediaDevice device, string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || path == @"\" || path == "/")
+            return;
+
+        if (device.DirectoryExists(path))
+            return;
+
+        var parts = path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+        var current = "";
+
+        foreach (var part in parts)
+        {
+            current = string.IsNullOrEmpty(current) ? @"\" + part : Path.Combine(current, part);
+            if (!device.DirectoryExists(current))
+            {
+                try
+                {
+                    device.CreateDirectory(current);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Aviso ao criar pasta MTP '{current}': {ex.Message}");
+                }
+            }
+        }
     }
 
     private void CollectDirectoryItems(
