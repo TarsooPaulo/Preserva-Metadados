@@ -552,6 +552,30 @@ public class FileTransferService
         }
     }
 
+    public static string CombineMtpPath(string basePath, string relativePath)
+    {
+        if (string.IsNullOrEmpty(basePath)) return relativePath.TrimStart('\\');
+        if (string.IsNullOrEmpty(relativePath)) return basePath;
+
+        var cleanBase = basePath.TrimEnd('\\');
+        var cleanRel = relativePath.TrimStart('\\');
+
+        return $"{cleanBase}\\{cleanRel}";
+    }
+
+    public static string GetMtpParentDirectory(string mtpPath)
+    {
+        if (string.IsNullOrEmpty(mtpPath) || mtpPath == @"\") return @"\";
+
+        var cleanPath = mtpPath.TrimEnd('\\');
+        var lastSlash = cleanPath.LastIndexOf('\\');
+
+        if (lastSlash < 0) return @"\";
+        if (lastSlash == 0) return @"\";
+
+        return cleanPath.Substring(0, lastSlash);
+    }
+
     public sealed class TransferQueueItem
     {
         public required FileItem SourceItem { get; set; }
