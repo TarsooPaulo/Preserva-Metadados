@@ -290,7 +290,7 @@
             <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Width" Value="36"/>
-            <Setter Property="Height" Value="32"/>
+            <Setter Property="Height" Value="36"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
             <Setter Property="Template">
@@ -338,383 +338,45 @@
 
     </Window.Resources>
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <!-- 0: Header -->
-            <RowDefinition Height="Auto"/>
-            <!-- 1: Dual Pane Area -->
-            <RowDefinition Height="*"/>
-            <!-- 2: Transfer Queue / Progress Panel -->
-            <RowDefinition Height="Auto"/>
-            <!-- 3: Bottom Status Bar -->
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <!-- Outer Container Border with Padding for Floating Cards Effect -->
+    <Border Padding="10" Background="{StaticResource AppBackground}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <!-- 0: Header / Top Bar -->
+                <RowDefinition Height="Auto"/>
+                <!-- 1: Main Content (Dual-Pane + Actions) -->
+                <RowDefinition Height="*"/>
+                <!-- 2: Progress / Operation Panel -->
+                <RowDefinition Height="Auto"/>
+                <!-- 3: Bottom Status Bar -->
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <!-- ══════════════════════════════════════════════════════════ -->
-        <!-- 0: HEADER TOPO — CYBER TECH                               -->
-        <!-- ══════════════════════════════════════════════════════════ -->
-        <Border Grid.Row="0" Background="{StaticResource HeaderGradient}" Padding="18,10" MouseDown="Header_MouseDown">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Logo + Title -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Shield Icon with 3D Cyan/Blue Glow -->
-                    <Border Width="42" Height="42" CornerRadius="10" Margin="0,0,12,0">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#0044CC" Offset="0"/>
-                                <GradientStop Color="#0088FF" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
-                        <Border.Effect>
-                            <DropShadowEffect ShadowDepth="0" BlurRadius="20" Color="#0066FF" Opacity="0.6"/>
-                        </Border.Effect>
-                        <materialDesign:PackIcon Kind="ShieldCheck" Width="24" Height="24" Foreground="White"
-                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="PRESERVA METADADOS" FontSize="20" FontWeight="ExtraBold" Foreground="White"/>
-                        <TextBlock Text="SEGURANÇA • INTEGRIDADE • LONGO PRAZO" FontSize="9" Foreground="{StaticResource TextSecondary}"
-                                   Margin="0,1,0,0"/>
-                    </StackPanel>
-
-                    <!-- App Badge -->
-                    <Border Background="#0D1B30" CornerRadius="6" Padding="10,4" Margin="14,0,0,0" VerticalAlignment="Center"
-                            BorderBrush="{StaticResource CardBorder}" BorderThickness="1">
-                        <TextBlock Text="DUAL-PANE MANAGER" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondary}"/>
-                    </Border>
-                </StackPanel>
-
-                <!-- Status Central: Preservation Active -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border CornerRadius="20" Padding="14,6" BorderThickness="1">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Color="#0A2E1A" Offset="0"/>
-                                <GradientStop Color="#0D3A20" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
-                        <Border.BorderBrush>
-                            <SolidColorBrush Color="#1B5E20"/>
-                        </Border.BorderBrush>
-                        <Border.Effect>
-                            <DropShadowEffect ShadowDepth="0" BlurRadius="12" Color="#00E676" Opacity="0.25"/>
-                        </Border.Effect>
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="CheckCircle" Foreground="#00E676" Width="16" Height="16" 
-                                                     VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="Preservação Estrita de Criação e Modificação Ativa" 
-                                       Foreground="#B9F6CA" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                            <TextBlock Text=" (Buffer Seguro)" Foreground="#69F0AE" FontSize="11" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <!-- Actions Right -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Settings Gear Icon -->
-                    <Button Style="{StaticResource NavIconButton}" ToolTip="Configurações" Width="36" Height="36" Margin="0,0,4,0"
-                            WindowChrome.IsHitTestVisibleInChrome="True">
-                        <materialDesign:PackIcon Kind="CogOutline" Width="20" Height="20" Foreground="{StaticResource TextSecondary}"/>
-                    </Button>
-
-                    <!-- Divisor -->
-                    <Rectangle Width="1" Height="20" Fill="{StaticResource TextMuted}" Opacity="0.3" Margin="4,0,8,0"/>
-
-                    <!-- Refresh Devices Button -->
-                    <Button Command="{Binding RefreshAllCommand}" ToolTip="Recarregar Dispositivos e Arquivos"
-                            Style="{StaticResource GlowButton}" Background="{StaticResource BlueButtonGradient}" Height="38" Margin="0,0,12,0"
-                            WindowChrome.IsHitTestVisibleInChrome="True">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="Sync" Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Atualizar Dispositivos" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-
-                    <!-- Custom Window Controls -->
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <!-- Minimize Button (—) -->
-                        <Button x:Name="BtnMinimize" Style="{StaticResource WindowControlButton}" Click="BtnMinimize_Click" ToolTip="Minimizar">
-                            <materialDesign:PackIcon Kind="Minus" Width="16" Height="16"/>
-                        </Button>
-
-                        <!-- Maximize / Restore Button (☐) -->
-                        <Button x:Name="BtnMaximize" Style="{StaticResource WindowControlButton}" Click="BtnMaximize_Click" ToolTip="Maximizar / Restaurar" Margin="2,0">
-                            <materialDesign:PackIcon Kind="WindowMaximize" Width="15" Height="15"/>
-                        </Button>
-
-                        <!-- Close Button (✕) -->
-                        <Button x:Name="BtnClose" Style="{StaticResource WindowCloseButton}" Click="BtnClose_Click" ToolTip="Fechar">
-                            <materialDesign:PackIcon Kind="Close" Width="16" Height="16"/>
-                        </Button>
-                    </StackPanel>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <!-- ══════════════════════════════════════════════════════════ -->
-        <!-- 1: ÁREA DUAL-PANE (ORIGEM / AÇÕES / DESTINO)              -->
-        <!-- ══════════════════════════════════════════════════════════ -->
-        <Grid Grid.Row="1" Margin="12,10,12,6">
-            <Grid.ColumnDefinitions>
-                <!-- Painel Origem -->
-                <ColumnDefinition Width="*" MinWidth="380"/>
-                <!-- Ações Centrais -->
-                <ColumnDefinition Width="180"/>
-                <!-- Painel Destino -->
-                <ColumnDefinition Width="*" MinWidth="380"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- ══════════════════════════════════════════════ -->
-            <!-- PAINEL DE ORIGEM (ESQUERDA)                   -->
-            <!-- ══════════════════════════════════════════════ -->
-            <Border Grid.Column="0" Background="{StaticResource CardBackground}" CornerRadius="12" 
-                    BorderBrush="{StaticResource CardBorder}" BorderThickness="1" Padding="12"
-                    DataContext="{Binding SourcePane}">
+            <!-- ══════════════════════════════════════════════════════════ -->
+            <!-- 0: HEADER TOPO — CYBER TECH & NEON ACCENTS                -->
+            <!-- ══════════════════════════════════════════════════════════ -->
+            <Border Grid.Row="0" Background="{StaticResource HeaderGradient}" CornerRadius="12,12,0,0" Padding="16,10" Margin="0,0,0,8" MouseDown="Header_MouseDown">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                    <!-- Header: Device + Nav -->
-                    <Grid Grid.Row="0" Margin="0,0,0,10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                    <!-- Cyberpunk Neon Visual Accents (Top Right Lines) -->
+                    <Canvas Grid.ColumnSpan="3" IsHitTestVisible="False" HorizontalAlignment="Right" VerticalAlignment="Top" Width="200" Height="20" Margin="0,-6,120,0">
+                        <Path Data="M 0,2 L 60,2 L 85,16 L 200,16" Stroke="{StaticResource NeonCyan}" StrokeThickness="1.5" Opacity="0.8">
+                            <Path.Effect>
+                                <DropShadowEffect ShadowDepth="0" BlurRadius="6" Color="#00D2FF" Opacity="0.8"/>
+                            </Path.Effect>
+                        </Path>
+                        <Path Data="M 40,6 L 70,6 L 85,16" Stroke="{StaticResource NeonBlue}" StrokeThickness="1" Opacity="0.6"/>
+                    </Canvas>
 
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                            <materialDesign:PackIcon Kind="{Binding SelectedDevice.IconKind}" Width="20" Height="20" 
-                                                     Foreground="{StaticResource NeonCyan}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}"
-                                      VerticalAlignment="Center" Margin="0,0,8,0" MinWidth="160"
-                                      Background="Transparent" Foreground="{StaticResource TextPrimary}"
-                                      FontWeight="SemiBold" FontSize="14" BorderThickness="0">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <materialDesign:PackIcon Kind="{Binding IconKind}" Width="16" Height="16" 
-                                                                     Margin="0,0,8,0" VerticalAlignment="Center" Foreground="{StaticResource NeonCyan}"/>
-                                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding CapacityInfo, StringFormat='  — {0}'}" Opacity="0.5" FontSize="11" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-
-                            <!-- Online Status Dot -->
-                            <Ellipse Width="8" Height="8" Fill="#00E676" Margin="4,0,6,0" VerticalAlignment="Center">
-                                <Ellipse.Effect>
-                                    <DropShadowEffect ShadowDepth="0" BlurRadius="6" Color="#00E676" Opacity="0.8"/>
-                                </Ellipse.Effect>
-                            </Ellipse>
-                            <TextBlock Text="Online" FontSize="10" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"/>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Style="{StaticResource NavIconButton}" Command="{Binding GoBackCommand}" IsEnabled="{Binding CanGoBack}" ToolTip="Voltar">
-                                <materialDesign:PackIcon Kind="ArrowLeft" Width="16" Height="16"/>
-                            </Button>
-                            <Button Style="{StaticResource NavIconButton}" Command="{Binding GoForwardCommand}" IsEnabled="{Binding CanGoForward}" ToolTip="Avançar">
-                                <materialDesign:PackIcon Kind="ArrowRight" Width="16" Height="16"/>
-                            </Button>
-                            <Button Style="{StaticResource NavIconButton}" Command="{Binding GoUpCommand}" IsEnabled="{Binding CanGoUp}" ToolTip="Subir Pasta">
-                                <materialDesign:PackIcon Kind="ArrowUp" Width="16" Height="16"/>
-                            </Button>
-                            <Button Style="{StaticResource NavIconButton}" Command="{Binding RefreshCommand}" ToolTip="Atualizar">
-                                <materialDesign:PackIcon Kind="Refresh" Width="16" Height="16"/>
-                            </Button>
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- Breadcrumbs + Search Bar -->
-                    <Grid Grid.Row="1" Margin="0,0,0,8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,0,8,0">
-                            <ItemsControl ItemsSource="{Binding Breadcrumbs}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Orientation="Horizontal"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Button Style="{StaticResource BreadcrumbButton}"
-                                                    Command="{Binding DataContext.NavigateToBreadcrumbCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                    CommandParameter="{Binding}" Content="{Binding Name}"/>
-                                            <materialDesign:PackIcon Kind="ChevronRight" Width="12" Height="12" Opacity="0.3"
-                                                                     VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" Margin="0,0,2,0"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-
-                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <Grid>
-                                <TextBox Style="{StaticResource DarkSearchBox}" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                         Width="130"/>
-                                <materialDesign:PackIcon Kind="Magnify" Width="14" Height="14" Foreground="{StaticResource TextMuted}"
-                                                         HorizontalAlignment="Left" VerticalAlignment="Center" Margin="6,0,0,0" IsHitTestVisible="False"/>
-                            </Grid>
-                            <Button Style="{StaticResource NavIconButton}" ToolTip="Filtros" Width="28" Height="28" Margin="4,0,0,0">
-                                <materialDesign:PackIcon Kind="FilterVariant" Width="14" Height="14"/>
-                            </Button>
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- File List DataGrid / ListView -->
-                    <Grid Grid.Row="2">
-                        <ListView ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
-                                  Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimary}"
-                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                  ItemContainerStyle="{StaticResource FileRowStyle}"
-                                  MouseDoubleClick="SourceList_MouseDoubleClick">
-                            <ListView.View>
-                                <GridView ColumnHeaderContainerStyle="{StaticResource DarkColumnHeader}">
-                                    <!-- Selection Checkbox -->
-                                    <GridViewColumn Width="35">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <CheckBox IsChecked="{Binding IsSelected}" Style="{StaticResource DarkCheckBox}"/>
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-
-                                    <!-- Nome com Ícone -->
-                                    <GridViewColumn Header="Nome ↕" Width="200">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <materialDesign:PackIcon Kind="{Binding IconKind}" 
-                                                                             Foreground="{Binding IconColor, Converter={StaticResource StringToBrush}}"
-                                                                             Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding Name}" ToolTip="{Binding FullPath}" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" Foreground="{StaticResource TextPrimary}"/>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-
-                                    <!-- Tamanho -->
-                                    <GridViewColumn Header="Tamanho ↕" Width="80">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding FormattedSize}" HorizontalAlignment="Right" 
-                                                           VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-
-                                    <!-- Modificado -->
-                                    <GridViewColumn Header="Modificado ↕" Width="130">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding FormattedLastWrite}" FontSize="11" 
-                                                           Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-
-                                    <!-- Chevron '>' Icon -->
-                                    <GridViewColumn Width="30">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <materialDesign:PackIcon Kind="ChevronRight" Width="14" Height="14" 
-                                                                         Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-                                </GridView>
-                            </ListView.View>
-                        </ListView>
-
-                        <!-- Loading Indicator -->
-                        <ProgressBar IsIndeterminate="True" Height="3" VerticalAlignment="Top" Background="Transparent"
-                                     Foreground="{StaticResource NeonCyan}"
-                                     Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}"/>
-                    </Grid>
-
-                    <!-- Footer -->
-                    <Grid Grid.Row="3" Margin="0,8,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0" Text="{Binding StatusSummary}" FontSize="11" 
-                                   Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"/>
-
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Style="{StaticResource FooterSelectButton}" Command="{Binding SelectAllCommand}" 
-                                    CommandParameter="True" Content="Todos"/>
-                            <Button Style="{StaticResource FooterSelectButton}" Command="{Binding SelectAllCommand}" 
-                                    CommandParameter="False" Content="Nenhum"/>
-                            <Button Style="{StaticResource FooterSelectButton}" Command="{Binding InvertSelectionCommand}" Content="Inverter"/>
-                            <Rectangle Width="1" Height="14" Fill="{StaticResource TextMuted}" Opacity="0.3" Margin="6,0"/>
-                            <Border Style="{StaticResource ViewToggleButton}">
-                                <materialDesign:PackIcon Kind="ViewGrid" Width="14" Height="14" Foreground="{StaticResource TextSecondary}"/>
-                            </Border>
-                            <Border Style="{StaticResource ViewToggleButton}">
-                                <materialDesign:PackIcon Kind="ViewList" Width="14" Height="14" Foreground="{StaticResource NeonCyan}"/>
-                            </Border>
-                        </StackPanel>
-                    </Grid>
-                </Grid>
-            </Border>
-
-            <!-- ══════════════════════════════════════════════ -->
-            <!-- COLUNA CENTRAL DE AÇÕES DE TRANSFERÊNCIA      -->
-            <!-- ══════════════════════════════════════════════ -->
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0">
-                <!-- Copiar para Destino -->
-                <Button Command="{Binding TransferSourceToDestCommand}"
-                        IsEnabled="{Binding IsTransferring, Converter={StaticResource InverseBool}}"
-                        ToolTip="Copiar itens selecionados da Origem para o Destino"
-                        Style="{StaticResource GlowButton}" Background="{StaticResource BlueButtonGradient}" Margin="0,0,0,10">
-                    <StackPanel Orientation="Horizontal">
-                        <materialDesign:PackIcon Kind="FolderArrowRight" Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Copiar para Destino →" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-
-                <!-- Copiar para Origem -->
-                <Button Command="{Binding TransferDestToSourceCommand}"
-                        IsEnabled="{Binding IsTransferring, Converter={StaticResource InverseBool}}"
-                        ToolTip="Copiar itens selecionados do Destino para a Origem"
-                        Style="{StaticResource GlowButton}" Margin="0,0,0,16">
-                    <Button.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#00802B" Offset="0"/>
-                            <GradientStop Color="#00CC44" Offset="1"/>
-                        </LinearGradientBrush>
-                    </Button.Background>
-                    <StackPanel Orientation="Horizontal">
-                        <materialDesign:PackIcon Kind="ArrowLeft" Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="← Copiar para Origem" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-
-                <!-- Info Card -->
-                <Border Background="{StaticResource CardBackground}" CornerRadius="12" Padding="16,14"
-                        BorderBrush="{StaticResource CardBorder}" BorderThickness="1">
-                    <StackPanel HorizontalAlignment="Center">
-                        <Border Width="40" Height="40" CornerRadius="20" HorizontalAlignment="Center" Margin="0,0,0,10">
+                    <!-- Logo + Title -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Shield Icon with 3D Cyan/Blue Glow -->
+                        <Border Width="42" Height="42" CornerRadius="10" Margin="0,0,12,0">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                     <GradientStop Color="#0044CC" Offset="0"/>
@@ -722,358 +384,720 @@
                                 </LinearGradientBrush>
                             </Border.Background>
                             <Border.Effect>
-                                <DropShadowEffect ShadowDepth="0" BlurRadius="12" Color="#0066FF" Opacity="0.4"/>
+                                <DropShadowEffect ShadowDepth="0" BlurRadius="20" Color="#0066FF" Opacity="0.6"/>
                             </Border.Effect>
-                            <materialDesign:PackIcon Kind="ShieldCheck" Width="20" Height="20" Foreground="White"
+                            <materialDesign:PackIcon Kind="ShieldCheck" Width="24" Height="24" Foreground="White"
                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <TextBlock Text="Seus dados," FontSize="12" FontWeight="Bold" Foreground="{StaticResource TextPrimary}"
-                                   HorizontalAlignment="Center"/>
-                        <TextBlock Text="sempre preservados" FontSize="12" FontWeight="Bold" Foreground="{StaticResource TextPrimary}"
-                                   HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                        <TextBlock TextWrapping="Wrap" TextAlignment="Center" FontSize="10" Foreground="{StaticResource TextMuted}" MaxWidth="140"
-                                   Text="Preservação de metadados garante a integridade e a rastreabilidade dos arquivos no longo prazo."/>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
 
-            <!-- ══════════════════════════════════════════════ -->
-            <!-- PAINEL DE DESTINO (DIREITA)                   -->
-            <!-- ══════════════════════════════════════════════ -->
-            <Border Grid.Column="2" Background="{StaticResource CardBackground}" CornerRadius="12"
-                    BorderBrush="{StaticResource CardBorder}" BorderThickness="1" Padding="12"
-                    DataContext="{Binding DestinationPane}">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="PRESERVA METADADOS" FontSize="20" FontWeight="ExtraBold" Foreground="White"/>
+                            <TextBlock Text="SEGURANÇA • INTEGRIDADE • LONGO PRAZO" FontSize="9" Foreground="{StaticResource TextSecondary}"
+                                       Margin="0,1,0,0"/>
+                        </StackPanel>
+
+                        <!-- App Badge -->
+                        <Border Background="#0D1B30" CornerRadius="6" Padding="10,4" Margin="14,0,0,0" VerticalAlignment="Center"
+                                BorderBrush="{StaticResource CardBorder}" BorderThickness="1">
+                            <TextBlock Text="DUAL-PANE MANAGER" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondary}"/>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Status Central: Preservation Active -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Border CornerRadius="20" Padding="14,6" BorderThickness="1">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#0A2E1A" Offset="0"/>
+                                    <GradientStop Color="#0D3A20" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Border.BorderBrush>
+                                <SolidColorBrush Color="#1B5E20"/>
+                            </Border.BorderBrush>
+                            <Border.Effect>
+                                <DropShadowEffect ShadowDepth="0" BlurRadius="12" Color="#00E676" Opacity="0.25"/>
+                            </Border.Effect>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="CheckCircle" Foreground="#00E676" Width="16" Height="16"
+                                                         VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Preservação Estrita de Criação e Modificação Ativa"
+                                           Foreground="#B9F6CA" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Text=" (Buffer Seguro)" Foreground="#69F0AE" FontSize="11" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Actions Right & Window Controls Aligned -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Settings Gear Icon -->
+                        <Button Style="{StaticResource NavIconButton}" ToolTip="Configurações" Width="36" Height="36" Margin="0,0,6,0" VerticalAlignment="Center"
+                                WindowChrome.IsHitTestVisibleInChrome="True">
+                            <materialDesign:PackIcon Kind="CogOutline" Width="20" Height="20" Foreground="{StaticResource TextSecondary}"/>
+                        </Button>
+
+                        <!-- Divisor -->
+                        <Rectangle Width="1" Height="20" Fill="{StaticResource TextMuted}" Opacity="0.3" Margin="2,0,8,0" VerticalAlignment="Center"/>
+
+                        <!-- Refresh Devices Button -->
+                        <Button Command="{Binding RefreshAllCommand}" ToolTip="Recarregar Dispositivos e Arquivos"
+                                Style="{StaticResource GlowButton}" Background="{StaticResource BlueButtonGradient}" Height="36" Margin="0,0,12,0" VerticalAlignment="Center"
+                                WindowChrome.IsHitTestVisibleInChrome="True">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Sync" Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Atualizar Dispositivos" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Divisor -->
+                        <Rectangle Width="1" Height="20" Fill="{StaticResource TextMuted}" Opacity="0.3" Margin="0,0,10,0" VerticalAlignment="Center"/>
+
+                        <!-- Custom Window Controls Aligned at Same Height -->
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Minimize Button (—) -->
+                            <Button x:Name="BtnMinimize" Style="{StaticResource WindowControlButton}" Click="BtnMinimize_Click" ToolTip="Minimizar" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="Minus" Width="16" Height="16"/>
+                            </Button>
+
+                            <!-- Maximize / Restore Button (☐) -->
+                            <Button x:Name="BtnMaximize" Style="{StaticResource WindowControlButton}" Click="BtnMaximize_Click" ToolTip="Maximizar / Restaurar" Margin="2,0" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="WindowMaximize" Width="15" Height="15"/>
+                            </Button>
+
+                            <!-- Close Button (✕) -->
+                            <Button x:Name="BtnClose" Style="{StaticResource WindowCloseButton}" Click="BtnClose_Click" ToolTip="Fechar" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="Close" Width="16" Height="16"/>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ══════════════════════════════════════════════════════════ -->
+            <!-- 1: ÁREA DUAL-PANE (ORIGEM / AÇÕES / DESTINO)              -->
+            <!-- ══════════════════════════════════════════════════════════ -->
+            <Grid Grid.Row="1" Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <!-- Painel Origem -->
+                    <ColumnDefinition Width="*" MinWidth="380"/>
+                    <!-- Ações Centrais -->
+                    <ColumnDefinition Width="180"/>
+                    <!-- Painel Destino -->
+                    <ColumnDefinition Width="*" MinWidth="380"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- ══════════════════════════════════════════════ -->
+                <!-- PAINEL DE ORIGEM (ESQUERDA)                   -->
+                <!-- ══════════════════════════════════════════════ -->
+                <Border Grid.Column="0" Background="{StaticResource CardBackground}" CornerRadius="12"
+                        BorderBrush="{StaticResource CardBorder}" BorderThickness="1" Padding="12"
+                        DataContext="{Binding SourcePane}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Header: Device + Nav -->
+                        <Grid Grid.Row="0" Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="{Binding SelectedDevice.IconKind}" Width="20" Height="20"
+                                                         Foreground="{StaticResource NeonCyan}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}"
+                                          VerticalAlignment="Center" Margin="0,0,8,0" MinWidth="160"
+                                          Background="Transparent" Foreground="{StaticResource TextPrimary}"
+                                          FontWeight="SemiBold" FontSize="14" BorderThickness="0">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="{Binding IconKind}" Width="16" Height="16"
+                                                                         Margin="0,0,8,0" VerticalAlignment="Center" Foreground="{StaticResource NeonCyan}"/>
+                                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding CapacityInfo, StringFormat='  — {0}'}" Opacity="0.5" FontSize="11" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+
+                                <!-- Online Status Dot -->
+                                <Ellipse Width="8" Height="8" Fill="#00E676" Margin="4,0,6,0" VerticalAlignment="Center">
+                                    <Ellipse.Effect>
+                                        <DropShadowEffect ShadowDepth="0" BlurRadius="6" Color="#00E676" Opacity="0.8"/>
+                                    </Ellipse.Effect>
+                                </Ellipse>
+                                <TextBlock Text="Online" FontSize="10" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Style="{StaticResource NavIconButton}" Command="{Binding GoBackCommand}" IsEnabled="{Binding CanGoBack}" ToolTip="Voltar">
+                                    <materialDesign:PackIcon Kind="ArrowLeft" Width="16" Height="16"/>
+                                </Button>
+                                <Button Style="{StaticResource NavIconButton}" Command="{Binding GoForwardCommand}" IsEnabled="{Binding CanGoForward}" ToolTip="Avançar">
+                                    <materialDesign:PackIcon Kind="ArrowRight" Width="16" Height="16"/>
+                                </Button>
+                                <Button Style="{StaticResource NavIconButton}" Command="{Binding GoUpCommand}" IsEnabled="{Binding CanGoUp}" ToolTip="Subir Pasta">
+                                    <materialDesign:PackIcon Kind="ArrowUp" Width="16" Height="16"/>
+                                </Button>
+                                <Button Style="{StaticResource NavIconButton}" Command="{Binding RefreshCommand}" ToolTip="Atualizar">
+                                    <materialDesign:PackIcon Kind="Refresh" Width="16" Height="16"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Breadcrumbs + Search Bar -->
+                        <Grid Grid.Row="1" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,0,8,0">
+                                <ItemsControl ItemsSource="{Binding Breadcrumbs}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Style="{StaticResource BreadcrumbButton}"
+                                                        Command="{Binding DataContext.NavigateToBreadcrumbCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}" Content="{Binding Name}"/>
+                                                <materialDesign:PackIcon Kind="ChevronRight" Width="12" Height="12" Opacity="0.3"
+                                                                         VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" Margin="0,0,2,0"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Grid>
+                                    <TextBox Style="{StaticResource DarkSearchBox}" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="130"/>
+                                    <materialDesign:PackIcon Kind="Magnify" Width="14" Height="14" Foreground="{StaticResource TextMuted}"
+                                                             HorizontalAlignment="Left" VerticalAlignment="Center" Margin="6,0,0,0" IsHitTestVisible="False"/>
+                                </Grid>
+                                <Button Style="{StaticResource NavIconButton}" ToolTip="Filtros" Width="28" Height="28" Margin="4,0,0,0">
+                                    <materialDesign:PackIcon Kind="FilterVariant" Width="14" Height="14"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- File List DataGrid / ListView -->
+                        <Grid Grid.Row="2">
+                            <ListView ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
+                                      Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimary}"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                      ItemContainerStyle="{StaticResource FileRowStyle}"
+                                      MouseDoubleClick="SourceList_MouseDoubleClick">
+                                <ListView.View>
+                                    <GridView ColumnHeaderContainerStyle="{StaticResource DarkColumnHeader}">
+                                        <!-- Selection Checkbox -->
+                                        <GridViewColumn Width="35">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsSelected}" Style="{StaticResource DarkCheckBox}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+
+                                        <!-- Nome com Ícone -->
+                                        <GridViewColumn Header="Nome ↕" Width="200">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <materialDesign:PackIcon Kind="{Binding IconKind}"
+                                                                                 Foreground="{Binding IconColor, Converter={StaticResource StringToBrush}}"
+                                                                                 Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding Name}" ToolTip="{Binding FullPath}" VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis" Foreground="{StaticResource TextPrimary}"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+
+                                        <!-- Tamanho -->
+                                        <GridViewColumn Header="Tamanho ↕" Width="80">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding FormattedSize}" HorizontalAlignment="Right"
+                                                               VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+
+                                        <!-- Modificado -->
+                                        <GridViewColumn Header="Modificado ↕" Width="130">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding FormattedLastWrite}" FontSize="11"
+                                                               Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+
+                                        <!-- Chevron '>' Icon -->
+                                        <GridViewColumn Width="30">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <materialDesign:PackIcon Kind="ChevronRight" Width="14" Height="14"
+                                                                             Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+
+                            <!-- Loading Indicator -->
+                            <ProgressBar IsIndeterminate="True" Height="3" VerticalAlignment="Top" Background="Transparent"
+                                         Foreground="{StaticResource NeonCyan}"
+                                         Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}"/>
+                        </Grid>
+
+                        <!-- Footer -->
+                        <Grid Grid.Row="3" Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" Text="{Binding StatusSummary}" FontSize="11"
+                                       Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"/>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Style="{StaticResource FooterSelectButton}" Command="{Binding SelectAllCommand}"
+                                        CommandParameter="True" Content="Todos"/>
+                                <Button Style="{StaticResource FooterSelectButton}" Command="{Binding SelectAllCommand}"
+                                        CommandParameter="False" Content="Nenhum"/>
+                                <Button Style="{StaticResource FooterSelectButton}" Command="{Binding InvertSelectionCommand}" Content="Inverter"/>
+                                <Rectangle Width="1" Height="14" Fill="{StaticResource TextMuted}" Opacity="0.3" Margin="6,0"/>
+                                <Border Style="{StaticResource ViewToggleButton}">
+                                    <materialDesign:PackIcon Kind="ViewGrid" Width="14" Height="14" Foreground="{StaticResource TextSecondary}"/>
+                                </Border>
+                                <Border Style="{StaticResource ViewToggleButton}">
+                                    <materialDesign:PackIcon Kind="ViewList" Width="14" Height="14" Foreground="{StaticResource NeonCyan}"/>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- ══════════════════════════════════════════════ -->
+                <!-- COLUNA CENTRAL DE AÇÕES DE TRANSFERÊNCIA      -->
+                <!-- ══════════════════════════════════════════════ -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0">
+                    <!-- Copiar para Destino -->
+                    <Button Command="{Binding TransferSourceToDestCommand}"
+                            IsEnabled="{Binding IsTransferring, Converter={StaticResource InverseBool}}"
+                            ToolTip="Copiar itens selecionados da Origem para o Destino"
+                            Style="{StaticResource GlowButton}" Background="{StaticResource BlueButtonGradient}" Margin="0,0,0,10">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="FolderArrowRight" Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Copiar para Destino →" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Copiar para Origem -->
+                    <Button Command="{Binding TransferDestToSourceCommand}"
+                            IsEnabled="{Binding IsTransferring, Converter={StaticResource InverseBool}}"
+                            ToolTip="Copiar itens selecionados do Destino para a Origem"
+                            Style="{StaticResource GlowButton}" Margin="0,0,0,16">
+                        <Button.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#00802B" Offset="0"/>
+                                <GradientStop Color="#00CC44" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Button.Background>
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="ArrowLeft" Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="← Copiar para Origem" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Info Card -->
+                    <Border Background="{StaticResource CardBackground}" CornerRadius="12" Padding="16,14"
+                            BorderBrush="{StaticResource CardBorder}" BorderThickness="1">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Border Width="40" Height="40" CornerRadius="20" HorizontalAlignment="Center" Margin="0,0,0,10">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#0044CC" Offset="0"/>
+                                        <GradientStop Color="#0088FF" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <Border.Effect>
+                                    <DropShadowEffect ShadowDepth="0" BlurRadius="12" Color="#0066FF" Opacity="0.4"/>
+                                </Border.Effect>
+                                <materialDesign:PackIcon Kind="ShieldCheck" Width="20" Height="20" Foreground="White"
+                                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Seus dados," FontSize="12" FontWeight="Bold" Foreground="{StaticResource TextPrimary}"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="sempre preservados" FontSize="12" FontWeight="Bold" Foreground="{StaticResource TextPrimary}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock TextWrapping="Wrap" TextAlignment="Center" FontSize="10" Foreground="{StaticResource TextMuted}" MaxWidth="140"
+                                       Text="Preservação de metadados garante a integridade e a rastreabilidade dos arquivos no longo prazo."/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ══════════════════════════════════════════════ -->
+                <!-- PAINEL DE DESTINO (DIREITA)                   -->
+                <!-- ══════════════════════════════════════════════ -->
+                <Border Grid.Column="2" Background="{StaticResource CardBackground}" CornerRadius="12"
+                        BorderBrush="{StaticResource CardBorder}" BorderThickness="1" Padding="12"
+                        DataContext="{Binding DestinationPane}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Header: Device + Nav -->
+                        <Grid Grid.Row="0" Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="{Binding SelectedDevice.IconKind}" Width="20" Height="20"
+                                                         Foreground="{StaticResource NeonCyan}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}"
+                                          VerticalAlignment="Center" Margin="0,0,8,0" MinWidth="160"
+                                          Background="Transparent" Foreground="{StaticResource TextPrimary}"
+                                          FontWeight="SemiBold" FontSize="14" BorderThickness="0">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="{Binding IconKind}" Width="16" Height="16"
+                                                                         Margin="0,0,8,0" VerticalAlignment="Center" Foreground="{StaticResource NeonCyan}"/>
+                                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding CapacityInfo, StringFormat='  — {0}'}" Opacity="0.5" FontSize="11" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+
+                                <!-- Online Status Dot -->
+                                <Ellipse Width="8" Height="8" Fill="#00E676" Margin="4,0,6,0" VerticalAlignment="Center">
+                                    <Ellipse.Effect>
+                                        <DropShadowEffect ShadowDepth="0" BlurRadius="6" Color="#00E676" Opacity="0.8"/>
+                                    </Ellipse.Effect>
+                                </Ellipse>
+                                <TextBlock Text="Online" FontSize="10" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Style="{StaticResource NavIconButton}" Command="{Binding GoBackCommand}" IsEnabled="{Binding CanGoBack}" ToolTip="Voltar">
+                                    <materialDesign:PackIcon Kind="ArrowLeft" Width="16" Height="16"/>
+                                </Button>
+                                <Button Style="{StaticResource NavIconButton}" Command="{Binding GoForwardCommand}" IsEnabled="{Binding CanGoForward}" ToolTip="Avançar">
+                                    <materialDesign:PackIcon Kind="ArrowRight" Width="16" Height="16"/>
+                                </Button>
+                                <Button Style="{StaticResource NavIconButton}" Command="{Binding GoUpCommand}" IsEnabled="{Binding CanGoUp}" ToolTip="Subir Pasta">
+                                    <materialDesign:PackIcon Kind="ArrowUp" Width="16" Height="16"/>
+                                </Button>
+                                <Button Style="{StaticResource NavIconButton}" Command="{Binding RefreshCommand}" ToolTip="Atualizar">
+                                    <materialDesign:PackIcon Kind="Refresh" Width="16" Height="16"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Breadcrumbs + Search Bar -->
+                        <Grid Grid.Row="1" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,0,8,0">
+                                <ItemsControl ItemsSource="{Binding Breadcrumbs}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Style="{StaticResource BreadcrumbButton}"
+                                                        Command="{Binding DataContext.NavigateToBreadcrumbCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}" Content="{Binding Name}"/>
+                                                <materialDesign:PackIcon Kind="ChevronRight" Width="12" Height="12" Opacity="0.3"
+                                                                         VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" Margin="0,0,2,0"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Grid>
+                                    <TextBox Style="{StaticResource DarkSearchBox}" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="130"/>
+                                    <materialDesign:PackIcon Kind="Magnify" Width="14" Height="14" Foreground="{StaticResource TextMuted}"
+                                                             HorizontalAlignment="Left" VerticalAlignment="Center" Margin="6,0,0,0" IsHitTestVisible="False"/>
+                                </Grid>
+                                <Button Style="{StaticResource NavIconButton}" ToolTip="Filtros" Width="28" Height="28" Margin="4,0,0,0">
+                                    <materialDesign:PackIcon Kind="FilterVariant" Width="14" Height="14"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- File List DataGrid / ListView -->
+                        <Grid Grid.Row="2">
+                            <ListView ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
+                                      Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimary}"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                      ItemContainerStyle="{StaticResource FileRowStyle}"
+                                      MouseDoubleClick="DestList_MouseDoubleClick">
+                                <ListView.View>
+                                    <GridView ColumnHeaderContainerStyle="{StaticResource DarkColumnHeader}">
+                                        <!-- Selection Checkbox -->
+                                        <GridViewColumn Width="35">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsSelected}" Style="{StaticResource DarkCheckBox}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+
+                                        <!-- Nome com Ícone -->
+                                        <GridViewColumn Header="Nome ↕" Width="200">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <materialDesign:PackIcon Kind="{Binding IconKind}"
+                                                                                 Foreground="{Binding IconColor, Converter={StaticResource StringToBrush}}"
+                                                                                 Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding Name}" ToolTip="{Binding FullPath}" VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis" Foreground="{StaticResource TextPrimary}"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+
+                                        <!-- Tamanho -->
+                                        <GridViewColumn Header="Tamanho ↕" Width="80">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding FormattedSize}" HorizontalAlignment="Right"
+                                                               VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+
+                                        <!-- Modificado -->
+                                        <GridViewColumn Header="Modificado ↕" Width="130">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding FormattedLastWrite}" FontSize="11"
+                                                               Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+
+                                        <!-- Chevron '>' Icon -->
+                                        <GridViewColumn Width="30">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <materialDesign:PackIcon Kind="ChevronRight" Width="14" Height="14"
+                                                                             Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+
+                            <!-- Loading Indicator -->
+                            <ProgressBar IsIndeterminate="True" Height="3" VerticalAlignment="Top" Background="Transparent"
+                                         Foreground="{StaticResource NeonCyan}"
+                                         Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}"/>
+                        </Grid>
+
+                        <!-- Footer -->
+                        <Grid Grid.Row="3" Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" Text="{Binding StatusSummary}" FontSize="11"
+                                       Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"/>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Style="{StaticResource FooterSelectButton}" Command="{Binding SelectAllCommand}"
+                                        CommandParameter="True" Content="Todos"/>
+                                <Button Style="{StaticResource FooterSelectButton}" Command="{Binding SelectAllCommand}"
+                                        CommandParameter="False" Content="Nenhum"/>
+                                <Button Style="{StaticResource FooterSelectButton}" Command="{Binding InvertSelectionCommand}" Content="Inverter"/>
+                                <Rectangle Width="1" Height="14" Fill="{StaticResource TextMuted}" Opacity="0.3" Margin="6,0"/>
+                                <Border Style="{StaticResource ViewToggleButton}">
+                                    <materialDesign:PackIcon Kind="ViewGrid" Width="14" Height="14" Foreground="{StaticResource TextSecondary}"/>
+                                </Border>
+                                <Border Style="{StaticResource ViewToggleButton}">
+                                    <materialDesign:PackIcon Kind="ViewList" Width="14" Height="14" Foreground="{StaticResource NeonCyan}"/>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- ══════════════════════════════════════════════════════════ -->
+            <!-- 2: PAINEL INFERIOR DE PROGRESSO                           -->
+            <!-- ══════════════════════════════════════════════════════════ -->
+            <Border Grid.Row="2" Margin="0,0,0,8" Background="{StaticResource CardBackground}" CornerRadius="12"
+                    BorderBrush="{StaticResource CardBorder}" BorderThickness="1">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Header: Device + Nav -->
-                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                    <!-- Neon Glowing Line on Top Edge -->
+                    <Border Grid.Row="0" Height="2" CornerRadius="1,1,0,0" Background="{StaticResource NeonProgressGradient}" Opacity="0.85"/>
+
+                    <!-- Row 1: Status + Cancel -->
+                    <Grid Grid.Row="1" Margin="16,10,16,6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                            <materialDesign:PackIcon Kind="{Binding SelectedDevice.IconKind}" Width="20" Height="20" 
-                                                     Foreground="{StaticResource NeonCyan}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}"
-                                      VerticalAlignment="Center" Margin="0,0,8,0" MinWidth="160"
-                                      Background="Transparent" Foreground="{StaticResource TextPrimary}"
-                                      FontWeight="SemiBold" FontSize="14" BorderThickness="0">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <materialDesign:PackIcon Kind="{Binding IconKind}" Width="16" Height="16" 
-                                                                     Margin="0,0,8,0" VerticalAlignment="Center" Foreground="{StaticResource NeonCyan}"/>
-                                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding CapacityInfo, StringFormat='  — {0}'}" Opacity="0.5" FontSize="11" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-
-                            <!-- Online Status Dot -->
-                            <Ellipse Width="8" Height="8" Fill="#00E676" Margin="4,0,6,0" VerticalAlignment="Center">
+                            <materialDesign:PackIcon Kind="SwapHorizontal" Width="22" Height="22" Foreground="{StaticResource NeonCyan}"
+                                                     Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <Ellipse Width="8" Height="8" Fill="#00E676" Margin="0,0,8,0" VerticalAlignment="Center">
                                 <Ellipse.Effect>
-                                    <DropShadowEffect ShadowDepth="0" BlurRadius="6" Color="#00E676" Opacity="0.8"/>
+                                    <DropShadowEffect ShadowDepth="0" BlurRadius="5" Color="#00E676" Opacity="0.7"/>
                                 </Ellipse.Effect>
                             </Ellipse>
-                            <TextBlock Text="Online" FontSize="10" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding TransferProgress.StatusMessage}" FontWeight="Bold" FontSize="13"
+                                           Foreground="{StaticResource TextPrimary}"/>
+                                <TextBlock Text="Aguardando operação..." FontSize="10" Foreground="{StaticResource TextMuted}" Margin="0,1,0,0"/>
+                            </StackPanel>
                         </StackPanel>
 
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Style="{StaticResource NavIconButton}" Command="{Binding GoBackCommand}" IsEnabled="{Binding CanGoBack}" ToolTip="Voltar">
-                                <materialDesign:PackIcon Kind="ArrowLeft" Width="16" Height="16"/>
-                            </Button>
-                            <Button Style="{StaticResource NavIconButton}" Command="{Binding GoForwardCommand}" IsEnabled="{Binding CanGoForward}" ToolTip="Avançar">
-                                <materialDesign:PackIcon Kind="ArrowRight" Width="16" Height="16"/>
-                            </Button>
-                            <Button Style="{StaticResource NavIconButton}" Command="{Binding GoUpCommand}" IsEnabled="{Binding CanGoUp}" ToolTip="Subir Pasta">
-                                <materialDesign:PackIcon Kind="ArrowUp" Width="16" Height="16"/>
-                            </Button>
-                            <Button Style="{StaticResource NavIconButton}" Command="{Binding RefreshCommand}" ToolTip="Atualizar">
-                                <materialDesign:PackIcon Kind="Refresh" Width="16" Height="16"/>
-                            </Button>
-                        </StackPanel>
+                        <!-- Cancel Button -->
+                        <Button Grid.Column="1" Command="{Binding CancelTransferCommand}"
+                                Visibility="{Binding IsTransferring, Converter={StaticResource BoolToVis}}"
+                                Style="{StaticResource NavIconButton}" Width="Auto" Padding="10,4"
+                                ToolTip="Cancelar Transferência">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="CloseCircleOutline" Width="16" Height="16" Foreground="#E53935" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Cancelar" FontSize="11" Foreground="#E53935" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                     </Grid>
 
-                    <!-- Breadcrumbs + Search Bar -->
-                    <Grid Grid.Row="1" Margin="0,0,0,8">
+                    <!-- Row 2: Metrics + Progress Bar -->
+                    <Grid Grid.Row="2" Margin="16,4,16,12">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,0,8,0">
-                            <ItemsControl ItemsSource="{Binding Breadcrumbs}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Orientation="Horizontal"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Button Style="{StaticResource BreadcrumbButton}"
-                                                    Command="{Binding DataContext.NavigateToBreadcrumbCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                    CommandParameter="{Binding}" Content="{Binding Name}"/>
-                                            <materialDesign:PackIcon Kind="ChevronRight" Width="12" Height="12" Opacity="0.3"
-                                                                     VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" Margin="0,0,2,0"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
+                        <!-- Metric Badges in Dark Pill Format -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
+                            <!-- Speed Metric -->
+                            <Border Style="{StaticResource MetricBadge}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="Speedometer" Width="15" Height="15" Foreground="{StaticResource NeonCyan}"
+                                                             Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center">
+                                        <Run Text="Velocidade: "/><Run Text="{Binding TransferProgress.SpeedFormatted, Mode=OneWay}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
 
-                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <Grid>
-                                <TextBox Style="{StaticResource DarkSearchBox}" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                         Width="130"/>
-                                <materialDesign:PackIcon Kind="Magnify" Width="14" Height="14" Foreground="{StaticResource TextMuted}"
-                                                         HorizontalAlignment="Left" VerticalAlignment="Center" Margin="6,0,0,0" IsHitTestVisible="False"/>
-                            </Grid>
-                            <Button Style="{StaticResource NavIconButton}" ToolTip="Filtros" Width="28" Height="28" Margin="4,0,0,0">
-                                <materialDesign:PackIcon Kind="FilterVariant" Width="14" Height="14"/>
-                            </Button>
+                            <!-- ETA Metric -->
+                            <Border Style="{StaticResource MetricBadge}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="ClockOutline" Width="15" Height="15" Foreground="{StaticResource NeonYellow}"
+                                                             Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center">
+                                        <Run Text="Tempo Restante: "/><Run Text="{Binding TransferProgress.EtaFormatted, Mode=OneWay}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- File Count Metric -->
+                            <Border Style="{StaticResource MetricBadge}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="FileDocumentOutline" Width="15" Height="15" Foreground="{StaticResource NeonGreen}"
+                                                             Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center">
+                                        <Run Text="Arquivo: "/><Run Text="{Binding TransferProgress.CurrentFileIndex, Mode=OneWay}"/>
+                                        <Run Text=" de "/><Run Text="{Binding TransferProgress.TotalFiles, Mode=OneWay}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
-                    </Grid>
 
-                    <!-- File List DataGrid / ListView -->
-                    <Grid Grid.Row="2">
-                        <ListView ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
-                                  Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimary}"
-                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                  ItemContainerStyle="{StaticResource FileRowStyle}"
-                                  MouseDoubleClick="DestList_MouseDoubleClick">
-                            <ListView.View>
-                                <GridView ColumnHeaderContainerStyle="{StaticResource DarkColumnHeader}">
-                                    <!-- Selection Checkbox -->
-                                    <GridViewColumn Width="35">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <CheckBox IsChecked="{Binding IsSelected}" Style="{StaticResource DarkCheckBox}"/>
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-
-                                    <!-- Nome com Ícone -->
-                                    <GridViewColumn Header="Nome ↕" Width="200">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <materialDesign:PackIcon Kind="{Binding IconKind}" 
-                                                                             Foreground="{Binding IconColor, Converter={StaticResource StringToBrush}}"
-                                                                             Width="18" Height="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding Name}" ToolTip="{Binding FullPath}" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" Foreground="{StaticResource TextPrimary}"/>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-
-                                    <!-- Tamanho -->
-                                    <GridViewColumn Header="Tamanho ↕" Width="80">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding FormattedSize}" HorizontalAlignment="Right" 
-                                                           VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-
-                                    <!-- Modificado -->
-                                    <GridViewColumn Header="Modificado ↕" Width="130">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding FormattedLastWrite}" FontSize="11" 
-                                                           Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-
-                                    <!-- Chevron '>' Icon -->
-                                    <GridViewColumn Width="30">
-                                        <GridViewColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <materialDesign:PackIcon Kind="ChevronRight" Width="14" Height="14" 
-                                                                         Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                            </DataTemplate>
-                                        </GridViewColumn.CellTemplate>
-                                    </GridViewColumn>
-                                </GridView>
-                            </ListView.View>
-                        </ListView>
-
-                        <!-- Loading Indicator -->
-                        <ProgressBar IsIndeterminate="True" Height="3" VerticalAlignment="Top" Background="Transparent"
-                                     Foreground="{StaticResource NeonCyan}"
-                                     Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}"/>
-                    </Grid>
-
-                    <!-- Footer -->
-                    <Grid Grid.Row="3" Margin="0,8,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0" Text="{Binding StatusSummary}" FontSize="11" 
-                                   Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"/>
-
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Style="{StaticResource FooterSelectButton}" Command="{Binding SelectAllCommand}" 
-                                    CommandParameter="True" Content="Todos"/>
-                            <Button Style="{StaticResource FooterSelectButton}" Command="{Binding SelectAllCommand}" 
-                                    CommandParameter="False" Content="Nenhum"/>
-                            <Button Style="{StaticResource FooterSelectButton}" Command="{Binding InvertSelectionCommand}" Content="Inverter"/>
-                            <Rectangle Width="1" Height="14" Fill="{StaticResource TextMuted}" Opacity="0.3" Margin="6,0"/>
-                            <Border Style="{StaticResource ViewToggleButton}">
-                                <materialDesign:PackIcon Kind="ViewGrid" Width="14" Height="14" Foreground="{StaticResource TextSecondary}"/>
-                            </Border>
-                            <Border Style="{StaticResource ViewToggleButton}">
-                                <materialDesign:PackIcon Kind="ViewList" Width="14" Height="14" Foreground="{StaticResource NeonCyan}"/>
-                            </Border>
+                        <!-- Progress Bar -->
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <DockPanel Margin="0,0,0,4">
+                                <TextBlock Text="Progresso Total do Lote" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
+                                <TextBlock DockPanel.Dock="Right" HorizontalAlignment="Right" FontSize="11" FontWeight="Bold"
+                                           Foreground="{StaticResource NeonCyan}">
+                                    <Run Text="{Binding TransferProgress.OverallPercentage, StringFormat={}{0:0}%, Mode=OneWay}"/>
+                                </TextBlock>
+                            </DockPanel>
+                            <ProgressBar Value="{Binding TransferProgress.OverallPercentage}" Minimum="0" Maximum="100" Height="8"
+                                         Background="#0D1B30" Foreground="{StaticResource NeonCyan}"
+                                         BorderThickness="0"/>
                         </StackPanel>
                     </Grid>
                 </Grid>
             </Border>
-        </Grid>
 
-        <!-- ══════════════════════════════════════════════════════════ -->
-        <!-- 2: PAINEL INFERIOR DE PROGRESSO                           -->
-        <!-- ══════════════════════════════════════════════════════════ -->
-        <Border Grid.Row="2" Margin="12,4,12,6" Background="{StaticResource CardBackground}" CornerRadius="12"
-                BorderBrush="{StaticResource CardBorder}" BorderThickness="1">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <!-- Neon Glowing Line on Top Edge -->
-                <Border Grid.Row="0" Height="2" CornerRadius="1,1,0,0" Background="{StaticResource NeonProgressGradient}" Opacity="0.85"/>
-
-                <!-- Row 1: Status + Cancel -->
-                <Grid Grid.Row="1" Margin="16,10,16,6">
+            <!-- ══════════════════════════════════════════════════════════ -->
+            <!-- 3: RODAPÉ FINAL (STATUS BAR)                               -->
+            <!-- ══════════════════════════════════════════════════════════ -->
+            <Border Grid.Row="3" Background="{StaticResource FooterGradient}" CornerRadius="0,0,12,12" Padding="14,8" Margin="0,0,0,0">
+                <Border.Effect>
+                    <DropShadowEffect ShadowDepth="-2" BlurRadius="10" Color="#0066FF" Opacity="0.3" Direction="90"/>
+                </Border.Effect>
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
+                    <!-- Left Status: Shield + Description -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <materialDesign:PackIcon Kind="SwapHorizontal" Width="22" Height="22" Foreground="{StaticResource NeonCyan}" 
-                                                 Margin="0,0,10,0" VerticalAlignment="Center"/>
-                        <Ellipse Width="8" Height="8" Fill="#00E676" Margin="0,0,8,0" VerticalAlignment="Center">
-                            <Ellipse.Effect>
-                                <DropShadowEffect ShadowDepth="0" BlurRadius="5" Color="#00E676" Opacity="0.7"/>
-                            </Ellipse.Effect>
-                        </Ellipse>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{Binding TransferProgress.StatusMessage}" FontWeight="Bold" FontSize="13" 
-                                       Foreground="{StaticResource TextPrimary}"/>
-                            <TextBlock Text="Aguardando operação..." FontSize="10" Foreground="{StaticResource TextMuted}" Margin="0,1,0,0"/>
-                        </StackPanel>
+                        <materialDesign:PackIcon Kind="ShieldCheck" Width="16" Height="16" Foreground="#80D8FF" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Pronto" FontWeight="Bold" FontSize="11" Foreground="White" VerticalAlignment="Center"/>
+                        <TextBlock Text=" — Gerenciador de Arquivos com Preservação Nativa" FontSize="11" Foreground="#B0C4DE" VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <!-- Cancel Button -->
-                    <Button Grid.Column="1" Command="{Binding CancelTransferCommand}"
-                            Visibility="{Binding IsTransferring, Converter={StaticResource BoolToVis}}"
-                            Style="{StaticResource NavIconButton}" Width="Auto" Padding="10,4"
-                            ToolTip="Cancelar Transferência">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="CloseCircleOutline" Width="16" Height="16" Foreground="#E53935" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Cancelar" FontSize="11" Foreground="#E53935" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                </Grid>
-
-                <!-- Row 2: Metrics + Progress Bar -->
-                <Grid Grid.Row="2" Margin="16,4,16,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Metric Badges in Dark Pill Format -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
-                        <!-- Speed Metric -->
-                        <Border Style="{StaticResource MetricBadge}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="Speedometer" Width="15" Height="15" Foreground="{StaticResource NeonCyan}" 
-                                                         Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center">
-                                    <Run Text="Velocidade: "/><Run Text="{Binding TransferProgress.SpeedFormatted, Mode=OneWay}"/>
-                                </TextBlock>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- ETA Metric -->
-                        <Border Style="{StaticResource MetricBadge}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="ClockOutline" Width="15" Height="15" Foreground="{StaticResource NeonYellow}" 
-                                                         Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center">
-                                    <Run Text="Tempo Restante: "/><Run Text="{Binding TransferProgress.EtaFormatted, Mode=OneWay}"/>
-                                </TextBlock>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- File Count Metric -->
-                        <Border Style="{StaticResource MetricBadge}">
-                            <StackPanel Orientation="Horizontal">
-                                <materialDesign:PackIcon Kind="FileDocumentOutline" Width="15" Height="15" Foreground="{StaticResource NeonGreen}" 
-                                                         Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center">
-                                    <Run Text="Arquivo: "/><Run Text="{Binding TransferProgress.CurrentFileIndex, Mode=OneWay}"/>
-                                    <Run Text=" de "/><Run Text="{Binding TransferProgress.TotalFiles, Mode=OneWay}"/>
-                                </TextBlock>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-
-                    <!-- Progress Bar -->
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <DockPanel Margin="0,0,0,4">
-                            <TextBlock Text="Progresso Total do Lote" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
-                            <TextBlock DockPanel.Dock="Right" HorizontalAlignment="Right" FontSize="11" FontWeight="Bold" 
-                                       Foreground="{StaticResource NeonCyan}">
-                                <Run Text="{Binding TransferProgress.OverallPercentage, StringFormat={}{0:0}%, Mode=OneWay}"/>
-                            </TextBlock>
-                        </DockPanel>
-                        <ProgressBar Value="{Binding TransferProgress.OverallPercentage}" Minimum="0" Maximum="100" Height="8" 
-                                     Background="#0D1B30" Foreground="{StaticResource NeonCyan}"
-                                     BorderThickness="0"/>
+                    <!-- Right Status: Database + Preservation Note -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="DatabaseCheck" Width="14" Height="14" Foreground="#80D8FF" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Metadados Preservados: CreationTimeUtc &amp; LastWriteTimeUtc gravados imediatamente após o buffer"
+                                   FontSize="10" Foreground="#B0C4DE" VerticalAlignment="Center" Opacity="0.85"/>
                     </StackPanel>
                 </Grid>
-            </Grid>
-        </Border>
-
-        <!-- ══════════════════════════════════════════════════════════ -->
-        <!-- 3: RODAPÉ FINAL                                           -->
-        <!-- ══════════════════════════════════════════════════════════ -->
-        <Border Grid.Row="3" Background="{StaticResource FooterGradient}" Padding="14,8">
-            <Border.Effect>
-                <DropShadowEffect ShadowDepth="-2" BlurRadius="10" Color="#0066FF" Opacity="0.3" Direction="90"/>
-            </Border.Effect>
-            <DockPanel>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <materialDesign:PackIcon Kind="ShieldCheck" Width="16" Height="16" Foreground="#80D8FF" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                    <TextBlock Text="Pronto" FontWeight="Bold" FontSize="11" Foreground="White" VerticalAlignment="Center"/>
-                    <TextBlock Text=" — Gerenciador de Arquivos com Preservação Nativa" FontSize="11" Foreground="#B0C4DE" VerticalAlignment="Center"/>
-                </StackPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <materialDesign:PackIcon Kind="DatabaseCheck" Width="14" Height="14" Foreground="#80D8FF" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                    <TextBlock Text="Metadados Preservados: CreationTimeUtc &amp; LastWriteTimeUtc gravados imediatamente após o buffer" 
-                               FontSize="10" Foreground="#B0C4DE" VerticalAlignment="Center" Opacity="0.85"/>
-                </StackPanel>
-            </DockPanel>
-        </Border>
-    </Grid>
+            </Border>
+        </Grid>
+    </Border>
 </Window>
