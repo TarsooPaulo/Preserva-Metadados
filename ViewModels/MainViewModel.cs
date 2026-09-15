@@ -70,6 +70,53 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public async Task DeleteSelectedAsync()
+    {
+        if (IsTransferring)
+            return;
+
+        var sourceSelected = SourcePane.Items.Where(i => i.IsSelected).ToList();
+        var destSelected = DestinationPane.Items.Where(i => i.IsSelected).ToList();
+
+        var allSelected = sourceSelected.Concat(destSelected).ToList();
+        if (allSelected.Count == 0)
+        {
+            var s = SourcePane.GetSelectedOrFocusedItems();
+            var d = DestinationPane.GetSelectedOrFocusedItems();
+            allSelected = s.Concat(d).Distinct().ToList();
+        }
+
+        if (allSelected.Count == 0)
+        {
+            MessageBox.Show("Nenhum arquivo ou pasta selecionado para exclusão.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var confirmResult = MessageBox.Show(
+            $"Tem certeza que deseja excluir {allSelected.Count} item(ns) selecionado(s)?",
+            "Confirmar Exclusão",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (confirmResult != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            await _fileService.DeleteItemsAsync(allSelected);
+
+            await Task.WhenAll(
+                SourcePane.RefreshAsync(),
+                DestinationPane.RefreshAsync()
+            );
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Ocorreu um erro durante a exclusão:\n{ex.Message}", "Erro de Exclusão", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
     public async Task RefreshAllAsync()
     {
         await Task.WhenAll(
