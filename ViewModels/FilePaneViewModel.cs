@@ -15,6 +15,7 @@ public partial class FilePaneViewModel : ObservableObject, IDisposable
     private readonly Stack<string> _forwardHistory = new();
     private IDisposable? _watcherSubscription;
     private List<FileItem> _allItems = new();
+    private CancellationTokenSource? _loadCts;
 
     public string PaneTitle { get; }
 
@@ -239,31 +240,59 @@ public partial class FilePaneViewModel : ObservableObject, IDisposable
 
     private async Task LoadItemsAsync()
     {
+        // Cancelar carregamento anterior se ainda em andamento
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
+        _loadCts = new CancellationTokenSource();
+        var token = _loadCts.Token;
+
         IsLoading = true;
 
         // Limpar watcher anterior
         _watcherSubscription?.Dispose();
         _watcherSubscription = null;
 
+        // Limpar itens anteriores
+        foreach (var oldItem in _allItems)
+        {
+            oldItem.SelectionChanged -= OnItemSelectionChanged;
+        }
+        _allItems.Clear();
+        Items.Clear();
+        UpdateSelectionSummary();
+
         var path = CurrentPath;
         var mtpDeviceId = SelectedDevice?.DeviceType == DeviceItemType.MtpDevice ? SelectedDevice.MtpDeviceId : null;
 
         try
         {
-            var list = await _fileService.GetItemsAsync(path, mtpDeviceId);
+            const int batchSize = 40;
+            var currentBatch = new List<FileItem>(batchSize);
 
-            // Ordenar: Pastas primeiro, depois arquivos alfabeticamente
-            _allItems = list.OrderByDescending(i => i.IsDirectory).ThenBy(i => i.Name).ToList();
-
-            foreach (var item in _allItems)
+            await Task.Run(async () =>
             {
-                item.SelectionChanged += OnItemSelectionChanged;
-            }
+                await foreach (var item in _fileService.GetItemsAsync(path, mtpDeviceId, token))
+                {
+                    token.ThrowIfCancellationRequested();
+                    currentBatch.Add(item);
 
-            FilterItems();
+                    if (currentBatch.Count >= batchSize)
+                    {
+                        var batchToProcess = currentBatch;
+                        currentBatch = new List<FileItem>(batchSize);
+                        await AddBatchToUIAsync(batchToProcess, token);
+                    }
+                }
 
-            // Configurar FileSystemWatcher em caminhos locais
-            if (string.IsNullOrEmpty(mtpDeviceId) && Directory.Exists(path))
+                if (currentBatch.Count > 0)
+                {
+                    token.ThrowIfCancellationRequested();
+                    await AddBatchToUIAsync(currentBatch, token);
+                }
+            }, token);
+
+            // Configurar FileSystemWatcher em caminhos locais se não foi cancelado
+            if (!token.IsCancellationRequested && string.IsNullOrEmpty(mtpDeviceId) && Directory.Exists(path))
             {
                 _watcherSubscription = _fileService.CreateWatcher(path, () =>
                 {
@@ -277,14 +306,62 @@ public partial class FilePaneViewModel : ObservableObject, IDisposable
                 });
             }
         }
+        catch (OperationCanceledException)
+        {
+            // Cancelado pelo usuário devido à navegação para outra pasta
+        }
         catch (Exception ex)
         {
-            StatusSummary = $"Erro ao listar: {ex.Message}";
+            if (!token.IsCancellationRequested)
+            {
+                StatusSummary = $"Erro ao listar: {ex.Message}";
+            }
         }
         finally
         {
-            IsLoading = false;
+            if (!token.IsCancellationRequested)
+            {
+                IsLoading = false;
+            }
         }
+    }
+
+    private async Task AddBatchToUIAsync(List<FileItem> batch, CancellationToken token)
+    {
+        if (token.IsCancellationRequested)
+            return;
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher != null && !dispatcher.CheckAccess())
+        {
+            await dispatcher.InvokeAsync(() => ProcessBatch(batch, token));
+        }
+        else
+        {
+            ProcessBatch(batch, token);
+        }
+    }
+
+    private void ProcessBatch(List<FileItem> batch, CancellationToken token)
+    {
+        if (token.IsCancellationRequested)
+            return;
+
+        var query = SearchText?.Trim();
+        bool hasQuery = !string.IsNullOrWhiteSpace(query);
+
+        foreach (var item in batch)
+        {
+            item.SelectionChanged += OnItemSelectionChanged;
+            _allItems.Add(item);
+
+            if (!hasQuery || (item.Name != null && query != null && item.Name.Contains(query, StringComparison.OrdinalIgnoreCase)))
+            {
+                Items.Add(item);
+            }
+        }
+
+        UpdateSelectionSummary();
     }
 
     private void FilterItems()
@@ -292,7 +369,7 @@ public partial class FilePaneViewModel : ObservableObject, IDisposable
         var query = SearchText?.Trim();
         var filtered = string.IsNullOrWhiteSpace(query)
             ? _allItems
-            : _allItems.Where(i => i.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+            : _allItems.Where(i => i.Name != null && query != null && i.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
 
         Items.Clear();
         foreach (var it in filtered)
@@ -444,6 +521,8 @@ public partial class FilePaneViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _loadCts?.Cancel();
+        _loadCts?.Dispose();
         _watcherSubscription?.Dispose();
     }
 }

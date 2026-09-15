@@ -666,6 +666,9 @@
                                   Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimary}"
                                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                  VirtualizingStackPanel.IsVirtualizing="True"
+                                  VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                  ScrollViewer.CanContentScroll="True"
                                   ItemContainerStyle="{StaticResource FileRowStyle}"
                                   MouseDoubleClick="SourceList_MouseDoubleClick">
                             <ListView.View>
@@ -938,6 +941,9 @@
                                   Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextPrimary}"
                                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                  VirtualizingStackPanel.IsVirtualizing="True"
+                                  VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                  ScrollViewer.CanContentScroll="True"
                                   ItemContainerStyle="{StaticResource FileRowStyle}"
                                   MouseDoubleClick="DestList_MouseDoubleClick">
                             <ListView.View>
