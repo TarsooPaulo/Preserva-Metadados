@@ -9,6 +9,34 @@ public class FileTransferService
 {
     private const int BufferSize = 1024 * 1024; // 1 MB buffer para máxima performance
 
+    public static string CombineMtpPath(string basePath, string relativePath)
+    {
+        if (string.IsNullOrEmpty(basePath))
+            return relativePath.TrimStart('\\', '/');
+
+        if (string.IsNullOrEmpty(relativePath))
+            return basePath;
+
+        basePath = basePath.TrimEnd('\\', '/');
+        relativePath = relativePath.TrimStart('\\', '/');
+
+        return $"{basePath}\\{relativePath}";
+    }
+
+    public static string GetMtpParentDirectory(string mtpPath)
+    {
+        if (string.IsNullOrWhiteSpace(mtpPath) || mtpPath == @"\" || mtpPath == "/")
+            return @"\";
+
+        var trimmed = mtpPath.TrimEnd('\\', '/');
+        var lastSlash = trimmed.LastIndexOfAny(new[] { '\\', '/' });
+
+        if (lastSlash <= 0)
+            return @"\";
+
+        return trimmed.Substring(0, lastSlash);
+    }
+
     public async Task TransferItemsAsync(
         IReadOnlyList<FileItem> items,
         string destinationDirectory,
