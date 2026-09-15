@@ -5,6 +5,6 @@ namespace PreservaMetadados.Services;
 public interface IFileService
 {
     Task<List<DeviceItem>> GetDevicesAsync();
-    Task<List<FileItem>> GetItemsAsync(string path, string? mtpDeviceId = null);
+    IAsyncEnumerable<FileItem> GetItemsAsync(string path, string? mtpDeviceId = null, CancellationToken cancellationToken = default);
     IDisposable? CreateWatcher(string path, Action onDirectoryChanged);
 }
