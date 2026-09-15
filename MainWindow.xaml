@@ -154,11 +154,93 @@
 
         <!-- Dark CheckBox Style -->
         <Style x:Key="DarkCheckBox" TargetType="CheckBox">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="{StaticResource TextMuted}"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="Background" Value="#081426"/>
+            <Setter Property="BorderBrush" Value="#0D3B7A"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
+            <Setter Property="Width" Value="18"/>
+            <Setter Property="Height" Value="18"/>
             <Setter Property="Margin" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid x:Name="RootGrid" Background="Transparent">
+                            <Border x:Name="BoxBorder"
+                                    Width="18" Height="18"
+                                    CornerRadius="3"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center">
+                                <Grid x:Name="GlyphGrid">
+                                    <!-- Checkmark Glyph -->
+                                    <Path x:Name="CheckGlyph"
+                                          Data="M 3.5,8.5 L 7,12 L 14.5,4.5"
+                                          Stroke="White"
+                                          StrokeThickness="2"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          Visibility="Collapsed"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                                    <!-- Indeterminate Glyph -->
+                                    <Rectangle x:Name="IndeterminateGlyph"
+                                               Width="10" Height="2.5"
+                                               Fill="White"
+                                               RadiusX="1" RadiusY="1"
+                                               Visibility="Collapsed"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <!-- Checked State -->
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="BoxBorder" Property="Background" Value="#0066FF"/>
+                                <Setter TargetName="BoxBorder" Property="BorderBrush" Value="#00D2FF"/>
+                                <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="BoxBorder" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect ShadowDepth="0" BlurRadius="8" Color="#0066FF" Opacity="0.6"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <!-- Indeterminate State -->
+                            <Trigger Property="IsChecked" Value="{x:Null}">
+                                <Setter TargetName="BoxBorder" Property="Background" Value="#0066FF"/>
+                                <Setter TargetName="BoxBorder" Property="BorderBrush" Value="#00D2FF"/>
+                                <Setter TargetName="IndeterminateGlyph" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="BoxBorder" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect ShadowDepth="0" BlurRadius="6" Color="#0066FF" Opacity="0.5"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <!-- Mouse Over -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="BoxBorder" Property="BorderBrush" Value="#00D2FF"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                    <Condition Property="IsChecked" Value="False"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="BoxBorder" Property="Background" Value="#0F2440"/>
+                            </MultiTrigger>
+                            <!-- Disabled -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="RootGrid" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- Breadcrumb Button -->
@@ -194,6 +276,7 @@
             <Setter Property="Padding" Value="0,3"/>
             <Setter Property="Margin" Value="0"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListViewItem">
@@ -588,10 +671,16 @@
                             <ListView.View>
                                 <GridView ColumnHeaderContainerStyle="{StaticResource DarkColumnHeader}">
                                     <!-- Selection Checkbox -->
-                                    <GridViewColumn Width="35">
+                                    <GridViewColumn Width="40">
+                                        <GridViewColumn.Header>
+                                            <CheckBox IsChecked="{Binding Path=DataContext.IsAllSelected, RelativeSource={RelativeSource AncestorType=ListView}, Mode=TwoWay}"
+                                                      Style="{StaticResource DarkCheckBox}"
+                                                      ToolTip="Selecionar / Deselecionar Todos"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </GridViewColumn.Header>
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
-                                                <CheckBox IsChecked="{Binding IsSelected}" Style="{StaticResource DarkCheckBox}"/>
+                                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkCheckBox}"/>
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
@@ -854,10 +943,16 @@
                             <ListView.View>
                                 <GridView ColumnHeaderContainerStyle="{StaticResource DarkColumnHeader}">
                                     <!-- Selection Checkbox -->
-                                    <GridViewColumn Width="35">
+                                    <GridViewColumn Width="40">
+                                        <GridViewColumn.Header>
+                                            <CheckBox IsChecked="{Binding Path=DataContext.IsAllSelected, RelativeSource={RelativeSource AncestorType=ListView}, Mode=TwoWay}"
+                                                      Style="{StaticResource DarkCheckBox}"
+                                                      ToolTip="Selecionar / Deselecionar Todos"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </GridViewColumn.Header>
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
-                                                <CheckBox IsChecked="{Binding IsSelected}" Style="{StaticResource DarkCheckBox}"/>
+                                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource DarkCheckBox}"/>
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>

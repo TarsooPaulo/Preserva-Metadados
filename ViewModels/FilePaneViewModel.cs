@@ -56,6 +56,16 @@ public partial class FilePaneViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool? isAllSelected = false;
 
+    private bool _isUpdatingSelectionSummary;
+
+    partial void OnIsAllSelectedChanged(bool? value)
+    {
+        if (_isUpdatingSelectionSummary)
+            return;
+
+        SelectAll(value ?? true);
+    }
+
     public FilePaneViewModel(string title, IFileService fileService)
     {
         PaneTitle = title;
@@ -300,21 +310,29 @@ public partial class FilePaneViewModel : ObservableObject, IDisposable
 
     public void UpdateSelectionSummary()
     {
-        var total = Items.Count;
-        var selected = Items.Where(i => i.IsSelected).ToList();
-        var selectedCount = selected.Count;
-        var selectedBytes = selected.Where(i => !i.IsDirectory).Sum(i => i.Length);
+        _isUpdatingSelectionSummary = true;
+        try
+        {
+            var total = Items.Count;
+            var selected = Items.Where(i => i.IsSelected).ToList();
+            var selectedCount = selected.Count;
+            var selectedBytes = selected.Where(i => !i.IsDirectory).Sum(i => i.Length);
 
-        if (selectedCount == 0)
-        {
-            StatusSummary = $"{total} item(ns)";
-            IsAllSelected = false;
+            if (selectedCount == 0)
+            {
+                StatusSummary = $"{total} item(ns)";
+                IsAllSelected = false;
+            }
+            else
+            {
+                var sizeStr = FileItem.FormatBytes(selectedBytes);
+                StatusSummary = $"{total} item(ns) | {selectedCount} selecionado(s) ({sizeStr})";
+                IsAllSelected = selectedCount == total ? true : (bool?)null;
+            }
         }
-        else
+        finally
         {
-            var sizeStr = FileItem.FormatBytes(selectedBytes);
-            StatusSummary = $"{total} item(ns) | {selectedCount} selecionado(s) ({sizeStr})";
-            IsAllSelected = selectedCount == total ? true : (bool?)null;
+            _isUpdatingSelectionSummary = false;
         }
     }
 
