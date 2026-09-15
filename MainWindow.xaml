@@ -799,6 +799,58 @@
                     </StackPanel>
                 </Button>
 
+                <!-- Card Excluir Selecionados (Lixeira) -->
+                <Button Command="{Binding DeleteSelectedCommand}"
+                        IsEnabled="{Binding IsTransferring, Converter={StaticResource InverseBool}}"
+                        ToolTip="Remova os itens selecionados com segurança"
+                        Margin="0,0,0,16">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="{StaticResource CardBackground}" CornerRadius="12" Padding="16,14"
+                                    BorderBrush="{StaticResource CardBorder}" BorderThickness="1" Cursor="Hand">
+                                <Border.Effect>
+                                    <DropShadowEffect ShadowDepth="0" BlurRadius="12" Color="#0066FF" Opacity="0.2"/>
+                                </Border.Effect>
+                                <StackPanel HorizontalAlignment="Center">
+                                    <Border Width="40" Height="40" CornerRadius="20" HorizontalAlignment="Center" Margin="0,0,0,10">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                <GradientStop Color="#0044CC" Offset="0"/>
+                                                <GradientStop Color="#0088FF" Offset="1"/>
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <Border.Effect>
+                                            <DropShadowEffect ShadowDepth="0" BlurRadius="12" Color="#0066FF" Opacity="0.4"/>
+                                        </Border.Effect>
+                                        <materialDesign:PackIcon Kind="TrashCan" Width="20" Height="20" Foreground="White"
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Text="Excluir Selecionados" FontSize="12" FontWeight="Bold" Foreground="{StaticResource TextPrimary}"
+                                               HorizontalAlignment="Center"/>
+                                    <TextBlock TextWrapping="Wrap" TextAlignment="Center" FontSize="10" Foreground="{StaticResource TextMuted}" MaxWidth="140"
+                                               Text="Remova os itens selecionados com segurança." Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource NeonCyan}"/>
+                                    <Setter TargetName="Bd" Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect ShadowDepth="0" BlurRadius="18" Color="#00D2FF" Opacity="0.5"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
                 <!-- Info Card -->
                 <Border Background="{StaticResource CardBackground}" CornerRadius="12" Padding="16,14"
                         BorderBrush="{StaticResource CardBorder}" BorderThickness="1">

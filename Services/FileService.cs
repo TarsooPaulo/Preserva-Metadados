@@ -300,4 +300,90 @@ public class FileService : IFileService
             catch { }
         }
     }
+
+    public Task DeleteItemsAsync(IEnumerable<FileItem> items)
+    {
+        return Task.Run(() =>
+        {
+            var mtpGroup = items.Where(i => i.IsMtp && !string.IsNullOrEmpty(i.MtpDeviceId))
+                                .GroupBy(i => i.MtpDeviceId!);
+
+            foreach (var group in mtpGroup)
+            {
+                var mtpDeviceId = group.Key;
+                try
+                {
+                    var devices = MediaDeviceManager.Instance?.GetDevices();
+                    var device = devices?.FirstOrDefault(d => d.DeviceId == mtpDeviceId);
+                    if (device != null)
+                    {
+                        using (device)
+                        {
+                            device.Connect();
+                            foreach (var item in group)
+                            {
+                                try
+                                {
+                                    if (item.IsDirectory)
+                                    {
+                                        device.DeleteDirectory(item.FullPath, true);
+                                    }
+                                    else
+                                    {
+                                        device.DeleteFile(item.FullPath);
+                                    }
+                                }
+                                catch { }
+                            }
+                            device.Disconnect();
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            var localItems = items.Where(i => !i.IsMtp);
+            foreach (var item in localItems)
+            {
+                try
+                {
+                    if (item.IsDirectory)
+                    {
+                        if (Directory.Exists(item.FullPath))
+                        {
+                            try
+                            {
+                                Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(
+                                    item.FullPath,
+                                    Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
+                                    Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+                            }
+                            catch
+                            {
+                                Directory.Delete(item.FullPath, true);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (File.Exists(item.FullPath))
+                        {
+                            try
+                            {
+                                Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(
+                                    item.FullPath,
+                                    Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
+                                    Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+                            }
+                            catch
+                            {
+                                File.Delete(item.FullPath);
+                            }
+                        }
+                    }
+                }
+                catch { }
+            }
+        });
+    }
 }
