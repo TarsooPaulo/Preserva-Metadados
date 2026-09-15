@@ -552,6 +552,38 @@ public class FileTransferService
         }
     }
 
+    public static string CombineMtpPath(string path1, string path2)
+    {
+        if (string.IsNullOrEmpty(path1)) return path2 ?? string.Empty;
+        if (string.IsNullOrEmpty(path2)) return path1 ?? string.Empty;
+
+        bool path1HasLeadingSlash = path1.StartsWith('\\') || path1.StartsWith('/');
+        string trimmedPath1 = path1.Trim('\\', '/');
+        string trimmedPath2 = path2.Trim('\\', '/');
+
+        string combined = string.IsNullOrEmpty(trimmedPath1)
+            ? trimmedPath2
+            : string.IsNullOrEmpty(trimmedPath2)
+                ? trimmedPath1
+                : $"{trimmedPath1}\\{trimmedPath2}";
+
+        return path1HasLeadingSlash ? $"\\{combined}" : combined;
+    }
+
+    public static string GetMtpParentDirectory(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || path == @"\" || path == "/")
+            return @"\";
+
+        string trimmed = path.TrimEnd('\\', '/');
+        int lastSlashIndex = trimmed.LastIndexOfAny(new[] { '\\', '/' });
+
+        if (lastSlashIndex <= 0)
+            return @"\";
+
+        return trimmed.Substring(0, lastSlashIndex);
+    }
+
     public sealed class TransferQueueItem
     {
         public required FileItem SourceItem { get; set; }
