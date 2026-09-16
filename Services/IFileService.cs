@@ -7,4 +7,5 @@ public interface IFileService
     Task<List<DeviceItem>> GetDevicesAsync();
     IAsyncEnumerable<FileItem> GetItemsAsync(string path, string? mtpDeviceId = null, CancellationToken cancellationToken = default);
     IDisposable? CreateWatcher(string path, Action onDirectoryChanged);
+    Task DeleteItemAsync(FileItem item, CancellationToken cancellationToken = default);
 }

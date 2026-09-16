@@ -308,6 +308,78 @@ public class FileService : IFileService
         }
     }
 
+    public Task DeleteItemAsync(FileItem item, CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (item.IsMtp)
+            {
+                var devices = MediaDeviceManager.Instance?.GetDevices();
+                var device = devices?.FirstOrDefault(d => d.DeviceId == item.MtpDeviceId);
+                if (device == null)
+                    throw new InvalidOperationException($"Dispositivo MTP com ID '{item.MtpDeviceId}' não foi encontrado.");
+
+                using (device)
+                {
+                    device.Connect();
+                    if (item.IsDirectory)
+                    {
+                        if (device.DirectoryExists(item.FullPath))
+                        {
+                            device.DeleteDirectory(item.FullPath, true);
+                        }
+                    }
+                    else
+                    {
+                        if (device.FileExists(item.FullPath))
+                        {
+                            device.DeleteFile(item.FullPath);
+                        }
+                    }
+                    device.Disconnect();
+                }
+                return;
+            }
+
+            if (item.IsDirectory)
+            {
+                if (Directory.Exists(item.FullPath))
+                {
+                    try
+                    {
+                        Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(
+                            item.FullPath,
+                            Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
+                            Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+                    }
+                    catch
+                    {
+                        Directory.Delete(item.FullPath, true);
+                    }
+                }
+            }
+            else
+            {
+                if (File.Exists(item.FullPath))
+                {
+                    try
+                    {
+                        Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(
+                            item.FullPath,
+                            Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
+                            Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+                    }
+                    catch
+                    {
+                        File.Delete(item.FullPath);
+                    }
+                }
+            }
+        }, cancellationToken);
+    }
+
     private sealed class WatcherSubscription : IDisposable
     {
         private readonly FileSystemWatcher _watcher;
