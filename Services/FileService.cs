@@ -1,7 +1,7 @@
 using MediaDevices;
 using PreservaMetadados.Models;
 using System.IO;
-using System.Timers;
+using System.Runtime.CompilerServices;
 
 namespace PreservaMetadados.Services;
 
@@ -72,78 +72,102 @@ public class FileService : IFileService
         });
     }
 
-    public Task<List<FileItem>> GetItemsAsync(string path, string? mtpDeviceId = null)
+    public async IAsyncEnumerable<FileItem> GetItemsAsync(
+        string path,
+        string? mtpDeviceId = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        return Task.Run(() =>
+        if (!string.IsNullOrEmpty(mtpDeviceId))
         {
-            var items = new List<FileItem>();
-
-            if (!string.IsNullOrEmpty(mtpDeviceId))
+            foreach (var item in GetMtpItems(mtpDeviceId, path, cancellationToken))
             {
-                return GetMtpItems(mtpDeviceId, path);
+                cancellationToken.ThrowIfCancellationRequested();
+                yield return item;
             }
+            yield break;
+        }
 
-            // Sistema de Arquivos Local
-            if (!Directory.Exists(path))
-                return items;
+        if (!Directory.Exists(path))
+            yield break;
 
+        var dirInfo = new DirectoryInfo(path);
+
+        IEnumerable<DirectoryInfo> subDirs;
+        try
+        {
+            subDirs = dirInfo.EnumerateDirectories();
+        }
+        catch
+        {
+            subDirs = Enumerable.Empty<DirectoryInfo>();
+        }
+
+        foreach (var subDir in subDirs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            FileItem? item = null;
             try
             {
-                var dirInfo = new DirectoryInfo(path);
+                if ((subDir.Attributes & FileAttributes.System) != 0 && (subDir.Attributes & FileAttributes.Hidden) != 0)
+                    continue;
 
-                // Diretórios
-                foreach (var subDir in dirInfo.EnumerateDirectories())
+                item = new FileItem
                 {
-                    try
-                    {
-                        // Omitir pastas ocultas de sistema irrelevantes se necessário, ou listar normalmente
-                        if ((subDir.Attributes & FileAttributes.System) != 0 && (subDir.Attributes & FileAttributes.Hidden) != 0)
-                            continue;
-
-                        items.Add(new FileItem
-                        {
-                            Name = subDir.Name,
-                            FullPath = subDir.FullName,
-                            IsDirectory = true,
-                            Length = 0,
-                            LastWriteTimeUtc = subDir.LastWriteTimeUtc,
-                            CreationTimeUtc = subDir.CreationTimeUtc,
-                            Extension = string.Empty
-                        });
-                    }
-                    catch { }
-                }
-
-                // Arquivos
-                foreach (var file in dirInfo.EnumerateFiles())
-                {
-                    try
-                    {
-                        items.Add(new FileItem
-                        {
-                            Name = file.Name,
-                            FullPath = file.FullName,
-                            IsDirectory = false,
-                            Length = file.Length,
-                            LastWriteTimeUtc = file.LastWriteTimeUtc,
-                            CreationTimeUtc = file.CreationTimeUtc,
-                            Extension = file.Extension
-                        });
-                    }
-                    catch { }
-                }
+                    Name = subDir.Name,
+                    FullPath = subDir.FullName,
+                    IsDirectory = true,
+                    Length = 0,
+                    LastWriteTimeUtc = subDir.LastWriteTimeUtc,
+                    CreationTimeUtc = subDir.CreationTimeUtc,
+                    Extension = string.Empty
+                };
             }
             catch { }
 
-            return items;
-        });
+            if (item != null)
+                yield return item;
+        }
+
+        IEnumerable<FileInfo> files;
+        try
+        {
+            files = dirInfo.EnumerateFiles();
+        }
+        catch
+        {
+            files = Enumerable.Empty<FileInfo>();
+        }
+
+        foreach (var file in files)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            FileItem? item = null;
+            try
+            {
+                item = new FileItem
+                {
+                    Name = file.Name,
+                    FullPath = file.FullName,
+                    IsDirectory = false,
+                    Length = file.Length,
+                    LastWriteTimeUtc = file.LastWriteTimeUtc,
+                    CreationTimeUtc = file.CreationTimeUtc,
+                    Extension = file.Extension
+                };
+            }
+            catch { }
+
+            if (item != null)
+                yield return item;
+        }
     }
 
-    private List<FileItem> GetMtpItems(string mtpDeviceId, string path)
+    private IEnumerable<FileItem> GetMtpItems(string mtpDeviceId, string path, CancellationToken cancellationToken)
     {
         var items = new List<FileItem>();
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var devices = MediaDeviceManager.Instance?.GetDevices();
             if (devices == null) return items;
             var device = devices.FirstOrDefault(d => d.DeviceId == mtpDeviceId);
@@ -155,12 +179,13 @@ public class FileService : IFileService
 
                 var currentPath = string.IsNullOrWhiteSpace(path) ? @"\" : path;
 
-                // Pastas MTP
+                cancellationToken.ThrowIfCancellationRequested();
                 var subDirs = device.GetDirectories(currentPath);
                 if (subDirs != null)
                 {
                     foreach (var subDir in subDirs)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         var dirName = Path.GetFileName(subDir.TrimEnd('\\'));
                         if (string.IsNullOrEmpty(dirName)) dirName = subDir;
 
@@ -189,12 +214,13 @@ public class FileService : IFileService
                     }
                 }
 
-                // Arquivos MTP
+                cancellationToken.ThrowIfCancellationRequested();
                 var files = device.GetFiles(currentPath);
                 if (files != null)
                 {
                     foreach (var filePath in files)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         var fileName = Path.GetFileName(filePath);
                         long length = 0;
                         DateTime? lastWrite = null;
@@ -226,6 +252,10 @@ public class FileService : IFileService
 
                 device.Disconnect();
             }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch { }
 
