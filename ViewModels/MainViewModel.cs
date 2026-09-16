@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.VisualBasic.FileIO;
 using PreservaMetadados.Models;
 using PreservaMetadados.Services;
 using System.IO;
@@ -80,6 +81,100 @@ public partial class MainViewModel : ObservableObject
             SourcePane.RefreshAsync(),
             DestinationPane.RefreshAsync()
         );
+    }
+
+    [RelayCommand]
+    public async Task DeleteSelectedAsync()
+    {
+        var sourceItems = SourcePane.GetSelectedOrFocusedItems().Where(i => i.IsSelected).ToList();
+        var destItems = DestinationPane.GetSelectedOrFocusedItems().Where(i => i.IsSelected).ToList();
+
+        var allSelectedItems = new List<FileItem>();
+        if (sourceItems.Count > 0)
+            allSelectedItems.AddRange(sourceItems);
+        if (destItems.Count > 0)
+            allSelectedItems.AddRange(destItems);
+
+        if (allSelectedItems.Count == 0)
+        {
+            MessageBox.Show("Nenhum arquivo ou pasta selecionado para excluir.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var confirmResult = MessageBox.Show(
+            $"Tem certeza que deseja excluir {allSelectedItems.Count} item(ns) selecionado(s)?\n\nEsta ação enviará os itens para a Lixeira do Windows (quando possível).",
+            "Confirmar Exclusão",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (confirmResult != MessageBoxResult.Yes)
+            return;
+
+        IsTransferring = true;
+        TransferProgress.StatusMessage = "Excluindo itens...";
+
+        try
+        {
+            await Task.Run(() =>
+            {
+                foreach (var item in allSelectedItems)
+                {
+                    if (item.IsMtp || !string.IsNullOrEmpty(item.MtpDeviceId))
+                    {
+                        // Exclusão para dispositivos MTP (definitiva)
+                        DeleteMtpItem(item);
+                    }
+                    else
+                    {
+                        // Exclusão para sistema de arquivos local (envia para Lixeira)
+                        if (item.IsDirectory)
+                        {
+                            FileSystem.DeleteDirectory(
+                                item.FullPath,
+                                UIOption.AllDialogs,
+                                RecycleOption.SendToRecycleBin,
+                                UICancelOption.ThrowException);
+                        }
+                        else
+                        {
+                            FileSystem.DeleteFile(
+                                item.FullPath,
+                                UIOption.AllDialogs,
+                                RecycleOption.SendToRecycleBin,
+                                UICancelOption.ThrowException);
+                        }
+                    }
+                }
+            });
+
+            // Atualiza ambos os painéis após exclusão
+            await SourcePane.RefreshAsync();
+            await DestinationPane.RefreshAsync();
+
+            TransferProgress.StatusMessage = "Exclusão concluída.";
+        }
+        catch (OperationCanceledException)
+        {
+            TransferProgress.StatusMessage = "Exclusão cancelada pelo usuário.";
+        }
+        catch (Exception ex)
+        {
+            TransferProgress.StatusMessage = $"Erro durante exclusão: {ex.Message}";
+            MessageBox.Show($"Ocorreu um erro durante a exclusão:\n{ex.Message}", "Erro de Exclusão", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsTransferring = false;
+        }
+    }
+
+    private void DeleteMtpItem(FileItem item)
+    {
+        // Para dispositivos MTP, a exclusão é definitiva
+        // A biblioteca MediaDevices não oferece suporte direto à exclusão via API pública
+        // Esta implementação lança uma exceção para informar que a funcionalidade não está disponível
+        // Em uma versão futura, seria necessário implementar acesso direto ao dispositivo MTP
+        throw new NotSupportedException("Exclusão de itens em dispositivos MTP (celulares/câmeras) ainda não é suportada nesta versão.");
     }
 
     private async Task ExecuteTransferAsync(FilePaneViewModel sourcePane, FilePaneViewModel destPane)
