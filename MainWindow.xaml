@@ -802,6 +802,44 @@
                     </StackPanel>
                 </Button>
 
+                <!-- Excluir Selecionados (Lixeira) -->
+                <Button Command="{Binding DeleteSelectedCommand}"
+                        IsEnabled="{Binding IsTransferring, Converter={StaticResource InverseBool}}"
+                        ToolTip="Excluir itens selecionados com segurança"
+                        Style="{StaticResource GlowButton}" Margin="0,0,0,16">
+                    <Button.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#CC0000" Offset="0"/>
+                            <GradientStop Color="#FF4444" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Button.Background>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Border Grid.Row="0" Width="40" Height="40" CornerRadius="20" HorizontalAlignment="Center" Margin="0,0,0,8">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#0044CC" Offset="0"/>
+                                    <GradientStop Color="#0088FF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Border.Effect>
+                                <DropShadowEffect ShadowDepth="0" BlurRadius="12" Color="#0066FF" Opacity="0.4"/>
+                            </Border.Effect>
+                            <materialDesign:PackIcon Kind="Delete" Width="20" Height="20" Foreground="White"
+                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Row="1" HorizontalAlignment="Center">
+                            <TextBlock Text="Excluir Selecionados" FontSize="12" FontWeight="Bold" Foreground="White"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Remova os itens selecionados com segurança." FontSize="10" Foreground="#CCCCCC"
+                                       HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="140"/>
+                        </StackPanel>
+                    </Grid>
+                </Button>
+
                 <!-- Info Card -->
                 <Border Background="{StaticResource CardBackground}" CornerRadius="12" Padding="16,14"
                         BorderBrush="{StaticResource CardBorder}" BorderThickness="1">
