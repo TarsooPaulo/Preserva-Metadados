@@ -1,5 +1,3 @@
-- Incluir icone e funcionalidade de deletar arquivos/pastas
-
 - Ajustar icone do programa para um icone personalizado
 
 - Verificar se o mesmo arquivo existe no destino antes de transferir

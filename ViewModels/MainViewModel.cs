@@ -70,6 +70,92 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public async Task DeleteSelectedAsync()
+    {
+        if (IsTransferring)
+            return;
+
+        var itemsToDelete = new List<(FilePaneViewModel Pane, FileItem Item)>();
+
+        var sourceSelected = SourcePane.Items.Where(i => i.IsSelected).ToList();
+        if (sourceSelected.Count > 0)
+        {
+            foreach (var item in sourceSelected)
+                itemsToDelete.Add((SourcePane, item));
+        }
+
+        var destSelected = DestinationPane.Items.Where(i => i.IsSelected).ToList();
+        if (destSelected.Count > 0)
+        {
+            foreach (var item in destSelected)
+                itemsToDelete.Add((DestinationPane, item));
+        }
+
+        if (itemsToDelete.Count == 0)
+        {
+            if (SourcePane.SelectedItem != null)
+            {
+                itemsToDelete.Add((SourcePane, SourcePane.SelectedItem));
+            }
+            else if (DestinationPane.SelectedItem != null)
+            {
+                itemsToDelete.Add((DestinationPane, DestinationPane.SelectedItem));
+            }
+        }
+
+        if (itemsToDelete.Count == 0)
+        {
+            MessageBox.Show("Nenhum arquivo ou pasta selecionado para exclusão.\nPor favor, selecione os itens que deseja remover.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var result = MessageBox.Show(
+            $"Tem certeza que deseja excluir permanentemente {itemsToDelete.Count} item(ns) selecionado(s)?",
+            "Confirmar Exclusão",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result != MessageBoxResult.Yes)
+            return;
+
+        IsTransferring = true;
+        var errors = new List<string>();
+
+        try
+        {
+            foreach (var (pane, item) in itemsToDelete)
+            {
+                try
+                {
+                    await _fileService.DeleteItemAsync(item);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"{item.Name}: {ex.Message}");
+                }
+            }
+
+            if (errors.Count > 0)
+            {
+                MessageBox.Show(
+                    $"Ocorreram erros ao excluir alguns itens:\n\n{string.Join("\n", errors)}",
+                    "Erro de Exclusão",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+        finally
+        {
+            IsTransferring = false;
+            var affectedPanes = itemsToDelete.Select(x => x.Pane).Distinct();
+            foreach (var pane in affectedPanes)
+            {
+                await pane.RefreshAsync();
+            }
+        }
+    }
+
+    [RelayCommand]
     public async Task RefreshAllAsync()
     {
         await Task.WhenAll(
