@@ -164,102 +164,107 @@ public class FileService : IFileService
 
     private IEnumerable<FileItem> GetMtpItems(string mtpDeviceId, string path, CancellationToken cancellationToken)
     {
-        var items = new List<FileItem>();
-        try
+        cancellationToken.ThrowIfCancellationRequested();
+        var devices = MediaDeviceManager.Instance?.GetDevices();
+        if (devices == null) yield break;
+        var device = devices.FirstOrDefault(d => d.DeviceId == mtpDeviceId);
+        if (device == null) yield break;
+
+        using (device)
         {
+            device.Connect();
+
+            var currentPath = string.IsNullOrWhiteSpace(path) ? @"\" : path;
+
             cancellationToken.ThrowIfCancellationRequested();
-            var devices = MediaDeviceManager.Instance?.GetDevices();
-            if (devices == null) return items;
-            var device = devices.FirstOrDefault(d => d.DeviceId == mtpDeviceId);
-            if (device == null) return items;
-
-            using (device)
+            string[]? subDirs = null;
+            try
             {
-                device.Connect();
+                subDirs = device.GetDirectories(currentPath);
+            }
+            catch { }
 
-                var currentPath = string.IsNullOrWhiteSpace(path) ? @"\" : path;
-
-                cancellationToken.ThrowIfCancellationRequested();
-                var subDirs = device.GetDirectories(currentPath);
-                if (subDirs != null)
+            if (subDirs != null)
+            {
+                foreach (var subDir in subDirs)
                 {
-                    foreach (var subDir in subDirs)
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var dirName = Path.GetFileName(subDir.TrimEnd('\\'));
+                    if (string.IsNullOrEmpty(dirName)) dirName = subDir;
+
+                    DateTime? lastWrite = null;
+                    DateTime? creation = null;
+                    try
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        var dirName = Path.GetFileName(subDir.TrimEnd('\\'));
-                        if (string.IsNullOrEmpty(dirName)) dirName = subDir;
-
-                        DateTime? lastWrite = null;
-                        DateTime? creation = null;
-                        try
-                        {
-                            var info = device.GetDirectoryInfo(subDir);
-                            lastWrite = info.LastWriteTime?.ToUniversalTime();
-                            creation = info.CreationTime?.ToUniversalTime();
-                        }
-                        catch { }
-
-                        items.Add(new FileItem
-                        {
-                            Name = dirName,
-                            FullPath = subDir,
-                            IsDirectory = true,
-                            Length = 0,
-                            LastWriteTimeUtc = lastWrite,
-                            CreationTimeUtc = creation,
-                            Extension = string.Empty,
-                            IsMtp = true,
-                            MtpDeviceId = mtpDeviceId
-                        });
+                        var info = device.GetDirectoryInfo(subDir);
+                        lastWrite = info.LastWriteTime?.ToUniversalTime();
+                        creation = info.CreationTime?.ToUniversalTime();
                     }
-                }
+                    catch { }
 
-                cancellationToken.ThrowIfCancellationRequested();
-                var files = device.GetFiles(currentPath);
-                if (files != null)
+                    yield return new FileItem
+                    {
+                        Name = dirName,
+                        FullPath = subDir,
+                        IsDirectory = true,
+                        Length = 0,
+                        LastWriteTimeUtc = lastWrite,
+                        CreationTimeUtc = creation,
+                        Extension = string.Empty,
+                        IsMtp = true,
+                        MtpDeviceId = mtpDeviceId
+                    };
+                }
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            string[]? files = null;
+            try
+            {
+                files = device.GetFiles(currentPath);
+            }
+            catch { }
+
+            if (files != null)
+            {
+                foreach (var filePath in files)
                 {
-                    foreach (var filePath in files)
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var fileName = Path.GetFileName(filePath);
+                    long length = 0;
+                    DateTime? lastWrite = null;
+                    DateTime? creation = null;
+
+                    try
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        var fileName = Path.GetFileName(filePath);
-                        long length = 0;
-                        DateTime? lastWrite = null;
-                        DateTime? creation = null;
-
-                        try
-                        {
-                            var info = device.GetFileInfo(filePath);
-                            length = (long)info.Length;
-                            lastWrite = info.LastWriteTime?.ToUniversalTime();
-                            creation = info.CreationTime?.ToUniversalTime();
-                        }
-                        catch { }
-
-                        items.Add(new FileItem
-                        {
-                            Name = fileName,
-                            FullPath = filePath,
-                            IsDirectory = false,
-                            Length = length,
-                            LastWriteTimeUtc = lastWrite,
-                            CreationTimeUtc = creation,
-                            Extension = Path.GetExtension(fileName),
-                            IsMtp = true,
-                            MtpDeviceId = mtpDeviceId
-                        });
+                        var info = device.GetFileInfo(filePath);
+                        length = (long)info.Length;
+                        lastWrite = info.LastWriteTime?.ToUniversalTime();
+                        creation = info.CreationTime?.ToUniversalTime();
                     }
-                }
+                    catch { }
 
+                    yield return new FileItem
+                    {
+                        Name = fileName,
+                        FullPath = filePath,
+                        IsDirectory = false,
+                        Length = length,
+                        LastWriteTimeUtc = lastWrite,
+                        CreationTimeUtc = creation,
+                        Extension = Path.GetExtension(fileName),
+                        IsMtp = true,
+                        MtpDeviceId = mtpDeviceId
+                    };
+                }
+            }
+
+            try
+            {
                 device.Disconnect();
             }
+            catch { }
         }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch { }
-
-        return items;
     }
 
     public IDisposable? CreateWatcher(string path, Action onDirectoryChanged)
