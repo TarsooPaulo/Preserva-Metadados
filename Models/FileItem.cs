@@ -8,9 +8,19 @@ public partial class FileItem : ObservableObject
     public string Name { get; set; } = string.Empty;
     public string FullPath { get; set; } = string.Empty;
     public bool IsDirectory { get; set; }
-    public long Length { get; set; }
-    public DateTime? LastWriteTimeUtc { get; set; }
-    public DateTime? CreationTimeUtc { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FormattedSize))]
+    private long length;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FormattedLastWrite))]
+    private DateTime? lastWriteTimeUtc;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FormattedCreation))]
+    private DateTime? creationTimeUtc;
+
     public string Extension { get; set; } = string.Empty;
         public string DisplayName => Name;
         public override string ToString() => Name ?? string.Empty;

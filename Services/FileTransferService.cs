@@ -44,7 +44,8 @@ public class FileTransferService
         string? destMtpDeviceId,
         IProgress<TransferProgressInfo> progress,
         CancellationToken cancellationToken,
-        Func<FileConflictInfo, Task<ConflictResolutionResult>>? conflictResolver = null)
+        Func<FileConflictInfo, Task<ConflictResolutionResult>>? conflictResolver = null,
+        Action<FileItem, bool>? onItemTransferred = null)
     {
         var progressInfo = new TransferProgressInfo
         {
@@ -53,13 +54,14 @@ public class FileTransferService
         };
         progress.Report(progressInfo);
 
-        ConflictResolutionResult? savedConflictResult = null;
+        bool aplicarParaTodos = false;
+        ConflictResolution acaoGlobal = ConflictResolution.Skip;
 
         async Task<ConflictResolution> ResolveConflictAsync(string itemName, string destPath, bool isDir)
         {
-            if (savedConflictResult != null && savedConflictResult.ApplyToAll)
+            if (aplicarParaTodos)
             {
-                return savedConflictResult.Resolution;
+                return acaoGlobal;
             }
 
             if (conflictResolver == null)
@@ -77,7 +79,8 @@ public class FileTransferService
             var result = await conflictResolver(conflictInfo);
             if (result.ApplyToAll)
             {
-                savedConflictResult = result;
+                aplicarParaTodos = true;
+                acaoGlobal = result.Resolution;
             }
 
             return result.Resolution;
@@ -298,6 +301,68 @@ public class FileTransferService
                     UpdateMetrics(progressInfo, speedStopwatch, ref lastSpeedCalcBytes, ref currentSpeed, totalBytesCopied, totalBytes);
                     progress.Report(progressInfo);
                 }, cancellationToken);
+            }
+
+            // Notifica atualização incremental do painel de destino
+            if (onItemTransferred != null)
+            {
+                var relPath = Path.GetRelativePath(destinationDirectory, entry.DestinationPath);
+                var pathParts = relPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+
+                FileItem transferredItem;
+
+                if (pathParts.Length > 1)
+                {
+                    // Item transferido é uma subpasta criada no diretório de destino
+                    var topLevelName = pathParts[0];
+                    var topLevelPath = Path.Combine(destinationDirectory, topLevelName);
+                    transferredItem = new FileItem
+                    {
+                        Name = topLevelName,
+                        FullPath = topLevelPath,
+                        IsDirectory = true,
+                        Length = 0,
+                        LastWriteTimeUtc = entry.SourceItem.LastWriteTimeUtc ?? DateTime.UtcNow,
+                        CreationTimeUtc = entry.SourceItem.CreationTimeUtc ?? DateTime.UtcNow,
+                        Extension = string.Empty,
+                        IsMtp = destIsMtp,
+                        MtpDeviceId = destMtpDeviceId ?? string.Empty
+                    };
+                }
+                else
+                {
+                    // Arquivo direto no diretório de destino
+                    DateTime? lastWrite = entry.SourceItem.LastWriteTimeUtc;
+                    DateTime? creation = entry.SourceItem.CreationTimeUtc;
+                    long len = entry.Length;
+
+                    if (!destIsMtp && File.Exists(entry.DestinationPath))
+                    {
+                        try
+                        {
+                            var fi = new FileInfo(entry.DestinationPath);
+                            len = fi.Length;
+                            lastWrite = fi.LastWriteTimeUtc;
+                            creation = fi.CreationTimeUtc;
+                        }
+                        catch { }
+                    }
+
+                    transferredItem = new FileItem
+                    {
+                        Name = Path.GetFileName(entry.DestinationPath),
+                        FullPath = entry.DestinationPath,
+                        IsDirectory = false,
+                        Length = len,
+                        LastWriteTimeUtc = lastWrite,
+                        CreationTimeUtc = creation,
+                        Extension = Path.GetExtension(entry.DestinationPath),
+                        IsMtp = destIsMtp,
+                        MtpDeviceId = destMtpDeviceId ?? string.Empty
+                    };
+                }
+
+                onItemTransferred(transferredItem, destExists);
             }
 
             // Atualiza progresso geral após o arquivo concluído

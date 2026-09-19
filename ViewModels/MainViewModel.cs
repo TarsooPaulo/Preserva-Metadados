@@ -228,11 +228,12 @@ public partial class MainViewModel : ObservableObject
                 destMtpDeviceId,
                 progressHandler,
                 _transferCts.Token,
-                conflictResolver: ShowConflictDialogAsync
+                conflictResolver: ShowConflictDialogAsync,
+                onItemTransferred: (item, isOverwrite) =>
+                {
+                    destPane.AddOrUpdateTransferredItem(item, isOverwrite);
+                }
             );
-
-            // Atualiza o painel de destino para mostrar os novos arquivos com as datas preservadas
-            await destPane.RefreshAsync();
         }
         catch (OperationCanceledException)
         {
