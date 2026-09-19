@@ -227,7 +227,8 @@ public partial class MainViewModel : ObservableObject
                 destIsMtp,
                 destMtpDeviceId,
                 progressHandler,
-                _transferCts.Token
+                _transferCts.Token,
+                conflictResolver: ShowConflictDialogAsync
             );
 
             // Atualiza o painel de destino para mostrar os novos arquivos com as datas preservadas
@@ -250,5 +251,31 @@ public partial class MainViewModel : ObservableObject
             _transferCts.Dispose();
             _transferCts = null;
         }
+    }
+
+    private async Task<ConflictResolutionResult> ShowConflictDialogAsync(FileConflictInfo conflictInfo)
+    {
+        if (Application.Current?.Dispatcher != null)
+        {
+            return await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                var activeWindow = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive) 
+                                   ?? Application.Current.MainWindow;
+                var dialog = new ConflictDialogWindow(conflictInfo.ItemName, conflictInfo.IsDirectory, conflictInfo.DestinationPath)
+                {
+                    Owner = activeWindow
+                };
+
+                dialog.ShowDialog();
+
+                return new ConflictResolutionResult
+                {
+                    Resolution = dialog.SelectedResolution,
+                    ApplyToAll = dialog.ApplyToAll
+                };
+            });
+        }
+
+        return new ConflictResolutionResult { Resolution = ConflictResolution.Overwrite, ApplyToAll = false };
     }
 }

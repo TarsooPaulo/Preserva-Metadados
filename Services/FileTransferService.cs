@@ -43,7 +43,8 @@ public class FileTransferService
         bool destIsMtp,
         string? destMtpDeviceId,
         IProgress<TransferProgressInfo> progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<FileConflictInfo, Task<ConflictResolutionResult>>? conflictResolver = null)
     {
         var progressInfo = new TransferProgressInfo
         {
@@ -52,13 +53,101 @@ public class FileTransferService
         };
         progress.Report(progressInfo);
 
-        // 1. Mapear todos os arquivos a serem copiados (incluindo subpastas)
+        ConflictResolutionResult? savedConflictResult = null;
+
+        async Task<ConflictResolution> ResolveConflictAsync(string itemName, string destPath, bool isDir)
+        {
+            if (savedConflictResult != null && savedConflictResult.ApplyToAll)
+            {
+                return savedConflictResult.Resolution;
+            }
+
+            if (conflictResolver == null)
+            {
+                return ConflictResolution.Overwrite;
+            }
+
+            var conflictInfo = new FileConflictInfo
+            {
+                ItemName = itemName,
+                DestinationPath = destPath,
+                IsDirectory = isDir
+            };
+
+            var result = await conflictResolver(conflictInfo);
+            if (result.ApplyToAll)
+            {
+                savedConflictResult = result;
+            }
+
+            return result.Resolution;
+        }
+
+        // 1. Checagem prévia de existência nos itens selecionados no topo
+        var itemsToTransfer = new List<FileItem>();
+
+        foreach (var item in items)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var targetPath = Path.Combine(destinationDirectory, item.Name);
+            bool exists = false;
+
+            if (destIsMtp && !string.IsNullOrEmpty(destMtpDeviceId))
+            {
+                exists = await Task.Run(() =>
+                {
+                    var devices = MediaDeviceManager.Instance?.GetDevices();
+                    var device = devices?.FirstOrDefault(d => d.DeviceId == destMtpDeviceId);
+                    if (device == null) return false;
+                    using (device)
+                    {
+                        device.Connect();
+                        bool ex = item.IsDirectory ? device.DirectoryExists(targetPath) : device.FileExists(targetPath);
+                        device.Disconnect();
+                        return ex;
+                    }
+                }, cancellationToken);
+            }
+            else
+            {
+                exists = item.IsDirectory ? Directory.Exists(targetPath) : File.Exists(targetPath);
+            }
+
+            if (exists)
+            {
+                var res = await ResolveConflictAsync(item.Name, targetPath, item.IsDirectory);
+                if (res == ConflictResolution.Cancel)
+                {
+                    progressInfo.IsTransferring = false;
+                    progressInfo.StatusMessage = "Transferência cancelada pelo usuário.";
+                    progress.Report(progressInfo);
+                    throw new OperationCanceledException("Transferência cancelada pelo usuário.");
+                }
+                else if (res == ConflictResolution.Skip)
+                {
+                    continue;
+                }
+            }
+
+            itemsToTransfer.Add(item);
+        }
+
+        if (itemsToTransfer.Count == 0)
+        {
+            progressInfo.IsTransferring = false;
+            progressInfo.StatusMessage = "Nenhum arquivo para transferir.";
+            progress.Report(progressInfo);
+            return;
+        }
+
+        // 2. Mapear todos os arquivos a serem copiados (incluindo subpastas)
         var fileEntries = new List<TransferQueueItem>();
         long totalBytes = 0;
 
         await Task.Run(() =>
         {
-            foreach (var item in items)
+            foreach (var item in itemsToTransfer)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -93,7 +182,7 @@ public class FileTransferService
             return;
         }
 
-        // 2. Executar cópia com medição de velocidade e preservação de datas
+        // 3. Executar cópia com medição de velocidade e preservação de datas
         var stopwatch = Stopwatch.StartNew();
         long totalBytesCopied = 0;
         long lastSpeedCalcBytes = 0;
@@ -105,6 +194,51 @@ public class FileTransferService
             cancellationToken.ThrowIfCancellationRequested();
 
             var entry = fileEntries[i];
+
+            // Checagem prévia no nível de arquivo individual
+            bool destExists = false;
+            if (destIsMtp && !string.IsNullOrEmpty(destMtpDeviceId))
+            {
+                destExists = await Task.Run(() =>
+                {
+                    var devices = MediaDeviceManager.Instance?.GetDevices();
+                    var device = devices?.FirstOrDefault(d => d.DeviceId == destMtpDeviceId);
+                    if (device == null) return false;
+                    using (device)
+                    {
+                        device.Connect();
+                        bool ex = device.FileExists(entry.DestinationPath);
+                        device.Disconnect();
+                        return ex;
+                    }
+                }, cancellationToken);
+            }
+            else
+            {
+                destExists = File.Exists(entry.DestinationPath);
+            }
+
+            if (destExists)
+            {
+                var res = await ResolveConflictAsync(entry.SourceItem.Name, entry.DestinationPath, false);
+                if (res == ConflictResolution.Cancel)
+                {
+                    progressInfo.IsTransferring = false;
+                    progressInfo.StatusMessage = "Transferência cancelada pelo usuário.";
+                    progress.Report(progressInfo);
+                    throw new OperationCanceledException("Transferência cancelada pelo usuário.");
+                }
+                else if (res == ConflictResolution.Skip)
+                {
+                    totalBytesCopied += entry.Length;
+                    progressInfo.BytesTransferred = totalBytesCopied;
+                    progressInfo.StatusMessage = $"Pulado: {entry.SourceItem.Name}";
+                    progressInfo.OverallPercentage = totalBytes > 0 ? ((double)totalBytesCopied / totalBytes) * 100 : 100;
+                    progress.Report(progressInfo);
+                    continue;
+                }
+            }
+
             progressInfo.CurrentFileName = entry.SourceItem.Name;
             progressInfo.CurrentFileIndex = i + 1;
             progressInfo.CurrentFileTotalBytes = entry.Length;
@@ -115,7 +249,7 @@ public class FileTransferService
 
             if (entry.SourceItem.IsMtp && destIsMtp)
             {
-                // MTP -> MTP (ex: Memória Interna do Celular -> Cartão SD no mesmo celular ou entre dispositivos MTP)
+                // MTP -> MTP
                 await CopyMtpToMtpAsync(entry, destMtpDeviceId!, (bytesChunk) =>
                 {
                     totalBytesCopied += bytesChunk;
@@ -154,7 +288,7 @@ public class FileTransferService
             }
             else
             {
-                // PC Local -> PC Local (HD, SSD, Pendrive, Rede)
+                // PC Local -> PC Local
                 await CopyLocalToLocalWithMetadataAsync(entry, (bytesChunk) =>
                 {
                     totalBytesCopied += bytesChunk;
