@@ -129,17 +129,20 @@
                 <Setter Property="Background" Value="#081426"/>
                 <Setter Property="BorderBrush" Value="#0D3B7A"/>
                 <Setter Property="BorderThickness" Value="1.5"/>
-                <Setter Property="Width" Value="18"/>
-                <Setter Property="Height" Value="18"/>
                 <Setter Property="Margin" Value="0"/>
-                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="HorizontalAlignment" Value="Left"/>
                 <Setter Property="VerticalAlignment" Value="Center"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="CheckBox">
                             <Grid x:Name="RootGrid" Background="Transparent">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
                                 <Border x:Name="BoxBorder"
+                                        Grid.Column="0"
                                         Width="18" Height="18"
                                         CornerRadius="3"
                                         Background="{TemplateBinding Background}"
@@ -169,6 +172,11 @@
                                                    VerticalAlignment="Center"/>
                                     </Grid>
                                 </Border>
+                                <ContentPresenter Grid.Column="1"
+                                                  Margin="8,0,0,0"
+                                                  HorizontalAlignment="Left"
+                                                  VerticalAlignment="Center"
+                                                  RecognizesAccessKey="True"/>
                             </Grid>
                             <ControlTemplate.Triggers>
                                 <!-- Checked State -->
