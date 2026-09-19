@@ -11,25 +11,17 @@ public class FileTransferService
 
     public static string CombineMtpPath(string basePath, string relativePath)
     {
-        if (string.IsNullOrEmpty(basePath))
-            return relativePath.TrimStart('\\', '/');
-
-        if (string.IsNullOrEmpty(relativePath))
-            return basePath;
-
-        basePath = basePath.TrimEnd('\\', '/');
-        relativePath = relativePath.TrimStart('\\', '/');
-
-        return $"{basePath}\\{relativePath}";
+        return PathSecurityHelper.NormalizeAndSanitizeMtpPath(basePath, relativePath);
     }
 
     public static string GetMtpParentDirectory(string mtpPath)
     {
-        if (string.IsNullOrWhiteSpace(mtpPath) || mtpPath == @"\" || mtpPath == "/")
+        var sanitized = PathSecurityHelper.NormalizeAndSanitizeMtpPath(mtpPath, string.Empty);
+        if (string.IsNullOrWhiteSpace(sanitized) || sanitized == @"\")
             return @"\";
 
-        var trimmed = mtpPath.TrimEnd('\\', '/');
-        var lastSlash = trimmed.LastIndexOfAny(new[] { '\\', '/' });
+        var trimmed = sanitized.TrimEnd('\\');
+        var lastSlash = trimmed.LastIndexOf('\\');
 
         if (lastSlash <= 0)
             return @"\";
@@ -47,6 +39,11 @@ public class FileTransferService
         Func<FileConflictInfo, Task<ConflictResolutionResult>>? conflictResolver = null,
         Action<FileItem, bool>? onItemTransferred = null)
     {
+        // Sanitizar caminho de destino
+        destinationDirectory = destIsMtp
+            ? PathSecurityHelper.NormalizeAndSanitizeMtpPath(destinationDirectory, string.Empty)
+            : PathSecurityHelper.GetSanitizedLocalPath(destinationDirectory);
+
         var progressInfo = new TransferProgressInfo
         {
             IsTransferring = true,
@@ -93,7 +90,10 @@ public class FileTransferService
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var targetPath = Path.Combine(destinationDirectory, item.Name);
+            string targetPath = destIsMtp
+                ? PathSecurityHelper.NormalizeAndSanitizeMtpPath(destinationDirectory, item.Name)
+                : PathSecurityHelper.GetSanitizedLocalPath(Path.Combine(destinationDirectory, item.Name), destinationDirectory);
+
             bool exists = false;
 
             if (destIsMtp && !string.IsNullOrEmpty(destMtpDeviceId))
@@ -160,7 +160,10 @@ public class FileTransferService
                 }
                 else
                 {
-                    var destFile = Path.Combine(destinationDirectory, item.Name);
+                    string destFile = destIsMtp
+                        ? PathSecurityHelper.NormalizeAndSanitizeMtpPath(destinationDirectory, item.Name)
+                        : PathSecurityHelper.GetSanitizedLocalPath(Path.Combine(destinationDirectory, item.Name), destinationDirectory);
+
                     fileEntries.Add(new TransferQueueItem
                     {
                         SourceItem = item,
@@ -306,66 +309,81 @@ public class FileTransferService
             // Notifica atualização incremental do painel de destino
             if (onItemTransferred != null)
             {
-                var relPath = Path.GetRelativePath(destinationDirectory, entry.DestinationPath);
-                var pathParts = relPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
-
                 FileItem transferredItem;
 
-                if (pathParts.Length > 1)
+                if (destIsMtp)
                 {
-                    // Item transferido é uma subpasta criada no diretório de destino
-                    var topLevelName = pathParts[0];
-                    var topLevelPath = Path.Combine(destinationDirectory, topLevelName);
-                    transferredItem = new FileItem
-                    {
-                        Name = topLevelName,
-                        FullPath = topLevelPath,
-                        IsDirectory = true,
-                        Length = 0,
-                        LastWriteTimeUtc = entry.SourceItem.LastWriteTimeUtc ?? DateTime.UtcNow,
-                        CreationTimeUtc = entry.SourceItem.CreationTimeUtc ?? DateTime.UtcNow,
-                        Extension = string.Empty,
-                        IsMtp = destIsMtp,
-                        MtpDeviceId = destMtpDeviceId ?? string.Empty
-                    };
-                }
-                else
-                {
-                    // Arquivo direto no diretório de destino
-                    DateTime? lastWrite = entry.SourceItem.LastWriteTimeUtc;
-                    DateTime? creation = entry.SourceItem.CreationTimeUtc;
-                    long len = entry.Length;
-
-                    if (!destIsMtp && File.Exists(entry.DestinationPath))
-                    {
-                        try
-                        {
-                            var fi = new FileInfo(entry.DestinationPath);
-                            len = fi.Length;
-                            lastWrite = fi.LastWriteTimeUtc;
-                            creation = fi.CreationTimeUtc;
-                        }
-                        catch { }
-                    }
-
                     transferredItem = new FileItem
                     {
                         Name = Path.GetFileName(entry.DestinationPath),
                         FullPath = entry.DestinationPath,
                         IsDirectory = false,
-                        Length = len,
-                        LastWriteTimeUtc = lastWrite,
-                        CreationTimeUtc = creation,
+                        Length = entry.Length,
+                        LastWriteTimeUtc = entry.SourceItem.LastWriteTimeUtc,
+                        CreationTimeUtc = entry.SourceItem.CreationTimeUtc,
                         Extension = Path.GetExtension(entry.DestinationPath),
-                        IsMtp = destIsMtp,
+                        IsMtp = true,
                         MtpDeviceId = destMtpDeviceId ?? string.Empty
                     };
+                }
+                else
+                {
+                    var relPath = Path.GetRelativePath(destinationDirectory, entry.DestinationPath);
+                    var pathParts = relPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+
+                    if (pathParts.Length > 1)
+                    {
+                        var topLevelName = pathParts[0];
+                        var topLevelPath = PathSecurityHelper.GetSanitizedLocalPath(Path.Combine(destinationDirectory, topLevelName), destinationDirectory);
+                        transferredItem = new FileItem
+                        {
+                            Name = topLevelName,
+                            FullPath = topLevelPath,
+                            IsDirectory = true,
+                            Length = 0,
+                            LastWriteTimeUtc = entry.SourceItem.LastWriteTimeUtc ?? DateTime.UtcNow,
+                            CreationTimeUtc = entry.SourceItem.CreationTimeUtc ?? DateTime.UtcNow,
+                            Extension = string.Empty,
+                            IsMtp = false,
+                            MtpDeviceId = string.Empty
+                        };
+                    }
+                    else
+                    {
+                        DateTime? lastWrite = entry.SourceItem.LastWriteTimeUtc;
+                        DateTime? creation = entry.SourceItem.CreationTimeUtc;
+                        long len = entry.Length;
+
+                        if (File.Exists(entry.DestinationPath))
+                        {
+                            try
+                            {
+                                var fi = new FileInfo(entry.DestinationPath);
+                                len = fi.Length;
+                                lastWrite = fi.LastWriteTimeUtc;
+                                creation = fi.CreationTimeUtc;
+                            }
+                            catch { }
+                        }
+
+                        transferredItem = new FileItem
+                        {
+                            Name = Path.GetFileName(entry.DestinationPath),
+                            FullPath = entry.DestinationPath,
+                            IsDirectory = false,
+                            Length = len,
+                            LastWriteTimeUtc = lastWrite,
+                            CreationTimeUtc = creation,
+                            Extension = Path.GetExtension(entry.DestinationPath),
+                            IsMtp = false,
+                            MtpDeviceId = string.Empty
+                        };
+                    }
                 }
 
                 onItemTransferred(transferredItem, destExists);
             }
 
-            // Atualiza progresso geral após o arquivo concluído
             progressInfo.OverallPercentage = totalBytes > 0 ? ((double)totalBytesCopied / totalBytes) * 100 : 100;
             progress.Report(progressInfo);
         }
@@ -424,8 +442,8 @@ public class FileTransferService
         Action<int> onBytesRead,
         CancellationToken cancellationToken)
     {
-        var sourcePath = entry.SourceItem.FullPath;
-        var destPath = entry.DestinationPath;
+        var sourcePath = PathSecurityHelper.GetSanitizedLocalPath(entry.SourceItem.FullPath);
+        var destPath = PathSecurityHelper.GetSanitizedLocalPath(entry.DestinationPath);
 
         var destDir = Path.GetDirectoryName(destPath);
         if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
@@ -433,28 +451,40 @@ public class FileTransferService
             Directory.CreateDirectory(destDir);
         }
 
-        // 1. Obter timestamps originais antes da cópia
         var sourceInfo = new FileInfo(sourcePath);
-        var creationTimeUtc = sourceInfo.CreationTimeUtc;
-        var lastWriteTimeUtc = sourceInfo.LastWriteTimeUtc;
-        var lastAccessTimeUtc = sourceInfo.LastAccessTimeUtc;
+        DateTime creationTimeUtc = DateTime.UtcNow;
+        DateTime lastWriteTimeUtc = DateTime.UtcNow;
+        DateTime lastAccessTimeUtc = DateTime.UtcNow;
 
-        // 2. Transferência de buffer de alto desempenho
+        try
+        {
+            creationTimeUtc = sourceInfo.CreationTimeUtc;
+            lastWriteTimeUtc = sourceInfo.LastWriteTimeUtc;
+            lastAccessTimeUtc = sourceInfo.LastAccessTimeUtc;
+        }
+        catch { }
+
         byte[] buffer = new byte[BufferSize];
 
-        await using (var sourceStream = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, BufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan))
-        await using (var destStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, FileOptions.Asynchronous))
+        try
         {
-            int bytesRead;
-            while ((bytesRead = await sourceStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
+            await using (var sourceStream = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, BufferSize, FileOptions.Asynchronous | FileOptions.SequentialScan))
+            await using (var destStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, FileOptions.Asynchronous))
             {
-                await destStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
-                onBytesRead(bytesRead);
+                int bytesRead;
+                while ((bytesRead = await sourceStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
+                {
+                    await destStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
+                    onBytesRead(bytesRead);
+                }
+                await destStream.FlushAsync(cancellationToken);
             }
-            await destStream.FlushAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is PathTooLongException)
+        {
+            throw new IOException($"Falha ao transferir arquivo '{Path.GetFileName(sourcePath)}': {ex.Message}", ex);
         }
 
-        // 3. PRESERVAÇÃO ESTRITA DE METADADOS: Imediatamente após fechamento do stream
         try
         {
             File.SetCreationTimeUtc(destPath, creationTimeUtc);
@@ -469,7 +499,7 @@ public class FileTransferService
         Action<int> onBytesRead,
         CancellationToken cancellationToken)
     {
-        var destPath = entry.DestinationPath;
+        var destPath = PathSecurityHelper.GetSanitizedLocalPath(entry.DestinationPath);
         var destDir = Path.GetDirectoryName(destPath);
         if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
         {
@@ -478,6 +508,7 @@ public class FileTransferService
 
         var item = entry.SourceItem;
         var deviceId = item.MtpDeviceId;
+        var sourceMtpPath = PathSecurityHelper.NormalizeAndSanitizeMtpPath(item.FullPath, string.Empty);
 
         await Task.Run(() =>
         {
@@ -490,15 +521,21 @@ public class FileTransferService
             {
                 device.Connect();
 
-                using (var destStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize))
+                try
                 {
-                    device.DownloadFile(item.FullPath, destStream);
+                    using (var destStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize))
+                    {
+                        device.DownloadFile(sourceMtpPath, destStream);
+                    }
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    throw new IOException($"Falha ao baixar arquivo do MTP '{Path.GetFileName(sourceMtpPath)}': {ex.Message}", ex);
                 }
 
                 device.Disconnect();
             }
 
-            // Preservar metadados do MTP
             try
             {
                 if (item.CreationTimeUtc.HasValue)
@@ -529,24 +566,28 @@ public class FileTransferService
             {
                 device.Connect();
 
-                var sourcePath = entry.SourceItem.FullPath;
-                var destPath = entry.DestinationPath;
-                var destDir = Path.GetDirectoryName(destPath);
+                var sourcePath = PathSecurityHelper.GetSanitizedLocalPath(entry.SourceItem.FullPath);
+                var destPath = PathSecurityHelper.NormalizeAndSanitizeMtpPath(entry.DestinationPath, string.Empty);
+                var destDir = GetMtpParentDirectory(destPath);
 
-                // Garante que a pasta pai exista no dispositivo MTP
-                if (!string.IsNullOrEmpty(destDir) && !device.DirectoryExists(destDir))
+                if (!string.IsNullOrEmpty(destDir) && destDir != @"\" && !device.DirectoryExists(destDir))
                 {
                     device.CreateDirectory(destDir);
                 }
 
-                // Se o arquivo de destino já existir no MTP, remove-o previamente para evitar colisão/exceção
                 if (device.FileExists(destPath))
                 {
                     device.DeleteFile(destPath);
                 }
 
-                // UploadFile requer o caminho do ARQUIVO de destino completo (não apenas o diretório)
-                device.UploadFile(sourcePath, destPath);
+                try
+                {
+                    device.UploadFile(sourcePath, destPath);
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    throw new IOException($"Falha ao enviar arquivo para o MTP '{Path.GetFileName(destPath)}': {ex.Message}", ex);
+                }
 
                 device.Disconnect();
             }
@@ -561,12 +602,13 @@ public class FileTransferService
         Action<int> onBytesRead,
         CancellationToken cancellationToken)
     {
-        var tempFilePath = Path.Combine(Path.GetTempPath(), $"preserva_mtp_{Guid.NewGuid():N}.tmp");
+        var tempFilePath = PathSecurityHelper.GetSanitizedLocalPath(Path.Combine(Path.GetTempPath(), $"preserva_mtp_{Guid.NewGuid():N}.tmp"));
 
         try
         {
-            // 1. Baixar da origem MTP para o arquivo temporário local no PC
             var sourceDeviceId = entry.SourceItem.MtpDeviceId;
+            var sourceMtpPath = PathSecurityHelper.NormalizeAndSanitizeMtpPath(entry.SourceItem.FullPath, string.Empty);
+
             await Task.Run(() =>
             {
                 var devices = MediaDeviceManager.Instance?.GetDevices();
@@ -580,14 +622,13 @@ public class FileTransferService
 
                     using (var tempStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize))
                     {
-                        sourceDevice.DownloadFile(entry.SourceItem.FullPath, tempStream);
+                        sourceDevice.DownloadFile(sourceMtpPath, tempStream);
                     }
 
                     sourceDevice.Disconnect();
                 }
             }, cancellationToken);
 
-            // Preservar metadados no buffer temporário
             try
             {
                 if (entry.SourceItem.CreationTimeUtc.HasValue)
@@ -597,7 +638,6 @@ public class FileTransferService
             }
             catch { }
 
-            // 2. Upload do arquivo temporário para o destino MTP
             await Task.Run(() =>
             {
                 var devices = MediaDeviceManager.Instance?.GetDevices();
@@ -609,10 +649,10 @@ public class FileTransferService
                 {
                     destDevice.Connect();
 
-                    var destPath = entry.DestinationPath;
-                    var destDir = Path.GetDirectoryName(destPath);
+                    var destPath = PathSecurityHelper.NormalizeAndSanitizeMtpPath(entry.DestinationPath, string.Empty);
+                    var destDir = GetMtpParentDirectory(destPath);
 
-                    if (!string.IsNullOrEmpty(destDir) && !destDevice.DirectoryExists(destDir))
+                    if (!string.IsNullOrEmpty(destDir) && destDir != @"\" && !destDevice.DirectoryExists(destDir))
                     {
                         destDevice.CreateDirectory(destDir);
                     }
@@ -652,28 +692,67 @@ public class FileTransferService
     {
         if (dirItem.IsMtp)
         {
-            // MTP Directory
             CollectMtpDirectoryItems(dirItem, baseDestDir, queue, ref totalBytes, cancellationToken);
             return;
         }
 
-        var sourceRoot = dirItem.FullPath;
+        var sourceRoot = PathSecurityHelper.GetSanitizedLocalPath(dirItem.FullPath);
         var dirInfo = new DirectoryInfo(sourceRoot);
         if (!dirInfo.Exists) return;
 
-        var targetDir = Path.Combine(baseDestDir, dirItem.Name);
+        // Se o próprio diretório for um Reparse Point / Symlink / Junction, não recursar
+        if (PathSecurityHelper.IsReparsePoint(dirInfo))
+        {
+            return;
+        }
 
-        foreach (var file in dirInfo.EnumerateFiles("*", SearchOption.AllDirectories))
+        var targetDir = PathSecurityHelper.GetSanitizedLocalPath(Path.Combine(baseDestDir, dirItem.Name), baseDestDir);
+
+        EnumerateDirectoryRecursive(dirInfo, sourceRoot, targetDir, queue, ref totalBytes, cancellationToken);
+    }
+
+    private void EnumerateDirectoryRecursive(
+        DirectoryInfo currentDir,
+        string sourceRoot,
+        string targetBaseDir,
+        List<TransferQueueItem> queue,
+        ref long totalBytes,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Evita seguir links simbólicos ou junções durante varredura recursiva
+        if (PathSecurityHelper.IsReparsePoint(currentDir))
+        {
+            return;
+        }
+
+        IEnumerable<FileInfo> files;
+        try
+        {
+            files = currentDir.EnumerateFiles();
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException || ex is DirectoryNotFoundException || ex is IOException)
+        {
+            return;
+        }
+
+        foreach (var file in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var relativePath = Path.GetRelativePath(sourceRoot, file.FullName);
-            var destPath = Path.Combine(targetDir, relativePath);
+            if (PathSecurityHelper.IsReparsePoint(file))
+            {
+                continue;
+            }
+
+            string relativePath = Path.GetRelativePath(sourceRoot, file.FullName);
+            string destPath = PathSecurityHelper.GetSanitizedLocalPath(Path.Combine(targetBaseDir, relativePath), targetBaseDir);
 
             var item = new FileItem
             {
                 Name = file.Name,
-                FullPath = file.FullName,
+                FullPath = PathSecurityHelper.GetSanitizedLocalPath(file.FullName),
                 IsDirectory = false,
                 Length = file.Length,
                 CreationTimeUtc = file.CreationTimeUtc,
@@ -689,6 +768,22 @@ public class FileTransferService
             });
 
             totalBytes += file.Length;
+        }
+
+        IEnumerable<DirectoryInfo> subDirs;
+        try
+        {
+            subDirs = currentDir.EnumerateDirectories();
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException || ex is DirectoryNotFoundException || ex is IOException)
+        {
+            return;
+        }
+
+        foreach (var subDir in subDirs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            EnumerateDirectoryRecursive(subDir, sourceRoot, targetBaseDir, queue, ref totalBytes, cancellationToken);
         }
     }
 
@@ -706,8 +801,9 @@ public class FileTransferService
         using (device)
         {
             device.Connect();
-            var targetDir = Path.Combine(baseDestDir, dirItem.Name);
-            CollectMtpRecursive(device, dirItem.FullPath, dirItem.FullPath, targetDir, dirItem.MtpDeviceId, queue, ref totalBytes, cancellationToken);
+            var targetDir = PathSecurityHelper.NormalizeAndSanitizeMtpPath(baseDestDir, dirItem.Name);
+            var sourceMtpDir = PathSecurityHelper.NormalizeAndSanitizeMtpPath(dirItem.FullPath, string.Empty);
+            CollectMtpRecursive(device, sourceMtpDir, sourceMtpDir, targetDir, dirItem.MtpDeviceId, queue, ref totalBytes, cancellationToken);
             device.Disconnect();
         }
     }
@@ -724,21 +820,31 @@ public class FileTransferService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var files = device.GetFiles(currentMtpDir);
+        string[]? files = null;
+        try
+        {
+            files = device.GetFiles(currentMtpDir);
+        }
+        catch { }
+
         if (files != null)
         {
             foreach (var f in files)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var relPath = f.Substring(rootMtpDir.Length).TrimStart('\\', '/');
-                var destPath = Path.Combine(targetLocalBase, relPath);
+                var sanitizedFile = PathSecurityHelper.NormalizeAndSanitizeMtpPath(f, string.Empty);
+                var relPath = sanitizedFile.Length >= rootMtpDir.Length
+                    ? sanitizedFile.Substring(rootMtpDir.Length).TrimStart('\\', '/')
+                    : Path.GetFileName(sanitizedFile);
+
+                var destPath = PathSecurityHelper.GetSanitizedLocalPath(Path.Combine(targetLocalBase, relPath), targetLocalBase);
 
                 long len = 0;
                 DateTime? cTime = null;
                 DateTime? wTime = null;
                 try
                 {
-                    var fi = device.GetFileInfo(f);
+                    var fi = device.GetFileInfo(sanitizedFile);
                     len = (long)fi.Length;
                     cTime = fi.CreationTime?.ToUniversalTime();
                     wTime = fi.LastWriteTime?.ToUniversalTime();
@@ -747,13 +853,13 @@ public class FileTransferService
 
                 var item = new FileItem
                 {
-                    Name = Path.GetFileName(f),
-                    FullPath = f,
+                    Name = Path.GetFileName(sanitizedFile),
+                    FullPath = sanitizedFile,
                     IsDirectory = false,
                     Length = len,
                     CreationTimeUtc = cTime,
                     LastWriteTimeUtc = wTime,
-                    Extension = Path.GetExtension(f),
+                    Extension = Path.GetExtension(sanitizedFile),
                     IsMtp = true,
                     MtpDeviceId = deviceId
                 };
@@ -769,12 +875,19 @@ public class FileTransferService
             }
         }
 
-        var dirs = device.GetDirectories(currentMtpDir);
+        string[]? dirs = null;
+        try
+        {
+            dirs = device.GetDirectories(currentMtpDir);
+        }
+        catch { }
+
         if (dirs != null)
         {
             foreach (var d in dirs)
             {
-                CollectMtpRecursive(device, d, rootMtpDir, targetLocalBase, deviceId, queue, ref totalBytes, cancellationToken);
+                var sanitizedSubDir = PathSecurityHelper.NormalizeAndSanitizeMtpPath(d, string.Empty);
+                CollectMtpRecursive(device, sanitizedSubDir, rootMtpDir, targetLocalBase, deviceId, queue, ref totalBytes, cancellationToken);
             }
         }
     }
