@@ -14,7 +14,7 @@ public partial class FilePaneViewModel : ObservableObject, IDisposable
     private readonly Stack<string> _backHistory = new();
     private readonly Stack<string> _forwardHistory = new();
     private IDisposable? _watcherSubscription;
-    private List<FileItem> _allItems = new();
+    private readonly List<FileItem> _allItems = new();
     private CancellationTokenSource? _loadCts;
 
     public string PaneTitle { get; }
@@ -266,7 +266,7 @@ public partial class FilePaneViewModel : ObservableObject, IDisposable
 
         try
         {
-            const int batchSize = 40;
+            const int batchSize = 30;
             var currentBatch = new List<FileItem>(batchSize);
 
             await Task.Run(async () =>
@@ -393,7 +393,6 @@ public partial class FilePaneViewModel : ObservableObject, IDisposable
             var total = Items.Count;
             var selected = Items.Where(i => i.IsSelected).ToList();
             var selectedCount = selected.Count;
-            var selectedBytes = selected.Where(i => !i.IsDirectory).Sum(i => i.Length);
 
             if (selectedCount == 0)
             {
@@ -402,6 +401,7 @@ public partial class FilePaneViewModel : ObservableObject, IDisposable
             }
             else
             {
+                var selectedBytes = selected.Where(i => !i.IsDirectory).Sum(i => i.Length);
                 var sizeStr = FileItem.FormatBytes(selectedBytes);
                 StatusSummary = $"{total} item(ns) | {selectedCount} selecionado(s) ({sizeStr})";
                 IsAllSelected = selectedCount == total ? true : (bool?)null;
