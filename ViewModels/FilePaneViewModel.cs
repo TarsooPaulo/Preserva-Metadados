@@ -385,6 +385,45 @@ public partial class FilePaneViewModel : ObservableObject, IDisposable
         UpdateSelectionSummary();
     }
 
+    public void AddOrUpdateTransferredItem(FileItem item, bool isOverwrite)
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher != null && !dispatcher.CheckAccess())
+        {
+            dispatcher.InvokeAsync(() => AddOrUpdateTransferredItemInternal(item, isOverwrite));
+        }
+        else
+        {
+            AddOrUpdateTransferredItemInternal(item, isOverwrite);
+        }
+    }
+
+    private void AddOrUpdateTransferredItemInternal(FileItem item, bool isOverwrite)
+    {
+        var existing = _allItems.FirstOrDefault(x => string.Equals(x.FullPath, item.FullPath, StringComparison.OrdinalIgnoreCase)
+                                                   || string.Equals(x.Name, item.Name, StringComparison.OrdinalIgnoreCase));
+
+        if (existing != null)
+        {
+            existing.Length = item.Length;
+            existing.LastWriteTimeUtc = item.LastWriteTimeUtc;
+            existing.CreationTimeUtc = item.CreationTimeUtc;
+        }
+        else
+        {
+            item.SelectionChanged += OnItemSelectionChanged;
+            _allItems.Add(item);
+
+            var query = SearchText?.Trim();
+            if (string.IsNullOrWhiteSpace(query) || (item.Name != null && item.Name.Contains(query, StringComparison.OrdinalIgnoreCase)))
+            {
+                Items.Add(item);
+            }
+        }
+
+        UpdateSelectionSummary();
+    }
+
     public void UpdateSelectionSummary()
     {
         _isUpdatingSelectionSummary = true;

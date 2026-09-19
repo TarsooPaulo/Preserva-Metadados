@@ -43,12 +43,13 @@
             </Border>
 
             <!-- Checkbox: Apply to all -->
-            <CheckBox Grid.Row="2" x:Name="ChkApplyToAll" Style="{StaticResource DarkCheckBox}" Margin="0,0,0,20">
-                <CheckBox.Content>
-                    <TextBlock Text="Aplicar esta mesma ação para todos os próximos conflitos" 
-                               FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0" VerticalAlignment="Center"/>
-                </CheckBox.Content>
-            </CheckBox>
+            <CheckBox Grid.Row="2" x:Name="ChkApplyToAll" 
+                      Content="Fazer isso para todos os itens" 
+                      Style="{StaticResource DarkCheckBox}" 
+                      HorizontalAlignment="Left" 
+                      Margin="0,15,0,15" 
+                      Foreground="{StaticResource TextSecondary}" 
+                      FontSize="12"/>
 
             <!-- Action Buttons -->
             <Grid Grid.Row="3">
