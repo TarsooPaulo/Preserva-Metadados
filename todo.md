@@ -1,1 +1,0 @@
-- Fazer testes exaustivos de segurança, garantir que não há vulnerabilidades de segurança
