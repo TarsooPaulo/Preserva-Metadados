@@ -131,7 +131,7 @@ public partial class MainViewModel : ObservableObject
                 }
                 catch (Exception ex)
                 {
-                    errors.Add($"{item.Name}: {ex.Message}");
+                    errors.Add($"{item.Name}: {SanitizeUserMessage(ex)}");
                 }
             }
 
@@ -242,9 +242,10 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            TransferProgress.StatusMessage = $"Erro durante transferência: {ex.Message}";
+            var userMsg = SanitizeUserMessage(ex);
+            TransferProgress.StatusMessage = $"Erro durante transferência: {userMsg}";
             TransferProgress.IsTransferring = false;
-            MessageBox.Show($"Ocorreu um erro durante a transferência:\n{ex.Message}", "Erro de Transferência", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Ocorreu um erro durante a transferência:\n{userMsg}", "Erro de Transferência", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -278,5 +279,31 @@ public partial class MainViewModel : ObservableObject
         }
 
         return new ConflictResolutionResult { Resolution = ConflictResolution.Overwrite, ApplyToAll = false };
+    }
+
+    public static string SanitizeUserMessage(Exception ex)
+    {
+        if (ex is OperationCanceledException)
+            return "Operação cancelada pelo usuário.";
+
+        if (ex is UnauthorizedAccessException)
+            return "Acesso negado. Permissões insuficientes para concluir a operação.";
+
+        if (ex is DirectoryNotFoundException || ex is FileNotFoundException)
+            return "O arquivo ou pasta especificado não foi encontrado.";
+
+        if (ex is PathTooLongException)
+            return "O caminho do arquivo excede o limite máximo permitido pelo sistema operacional.";
+
+        if (ex is InvalidOperationException || ex is IOException)
+        {
+            if (!string.IsNullOrWhiteSpace(ex.Message) && !ex.Message.Contains("  at ") && !ex.Message.Contains("\n") && ex.Message.Length < 300)
+            {
+                return ex.Message;
+            }
+            return "Ocorreu um erro de I/O ao acessar o arquivo ou diretório.";
+        }
+
+        return "Ocorreu um erro inesperado ao executar a operação.";
     }
 }
