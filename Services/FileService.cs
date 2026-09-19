@@ -34,7 +34,7 @@ public class FileService : IFileService
                         devices.Add(new DeviceItem
                         {
                             Name = drive.Name,
-                            Path = drive.RootDirectory.FullName,
+                            Path = PathSecurityHelper.GetSanitizedLocalPath(drive.RootDirectory.FullName),
                             VolumeLabel = label,
                             DeviceType = devType,
                             TotalSize = totalSize,
@@ -79,7 +79,8 @@ public class FileService : IFileService
     {
         if (!string.IsNullOrEmpty(mtpDeviceId))
         {
-            foreach (var item in GetMtpItems(mtpDeviceId, path, cancellationToken))
+            var sanitizedMtpPath = PathSecurityHelper.NormalizeAndSanitizeMtpPath(path, string.Empty);
+            foreach (var item in GetMtpItems(mtpDeviceId, sanitizedMtpPath, cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 yield return item;
@@ -87,10 +88,20 @@ public class FileService : IFileService
             yield break;
         }
 
-        if (!Directory.Exists(path))
+        string sanitizedLocalPath;
+        try
+        {
+            sanitizedLocalPath = PathSecurityHelper.GetSanitizedLocalPath(path);
+        }
+        catch
+        {
+            yield break;
+        }
+
+        if (!Directory.Exists(sanitizedLocalPath))
             yield break;
 
-        var dirInfo = new DirectoryInfo(path);
+        var dirInfo = new DirectoryInfo(sanitizedLocalPath);
 
         IEnumerable<DirectoryInfo> subDirs;
         try
@@ -114,7 +125,7 @@ public class FileService : IFileService
                 item = new FileItem
                 {
                     Name = subDir.Name,
-                    FullPath = subDir.FullName,
+                    FullPath = PathSecurityHelper.GetSanitizedLocalPath(subDir.FullName),
                     IsDirectory = true,
                     Length = 0,
                     LastWriteTimeUtc = subDir.LastWriteTimeUtc,
@@ -147,7 +158,7 @@ public class FileService : IFileService
                 item = new FileItem
                 {
                     Name = file.Name,
-                    FullPath = file.FullName,
+                    FullPath = PathSecurityHelper.GetSanitizedLocalPath(file.FullName),
                     IsDirectory = false,
                     Length = file.Length,
                     LastWriteTimeUtc = file.LastWriteTimeUtc,
@@ -174,7 +185,7 @@ public class FileService : IFileService
         {
             device.Connect();
 
-            var currentPath = string.IsNullOrWhiteSpace(path) ? @"\" : path;
+            var currentPath = PathSecurityHelper.NormalizeAndSanitizeMtpPath(path, string.Empty);
 
             cancellationToken.ThrowIfCancellationRequested();
             string[]? subDirs = null;
@@ -189,14 +200,15 @@ public class FileService : IFileService
                 foreach (var subDir in subDirs)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var dirName = Path.GetFileName(subDir.TrimEnd('\\'));
-                    if (string.IsNullOrEmpty(dirName)) dirName = subDir;
+                    var sanitizedSubDir = PathSecurityHelper.NormalizeAndSanitizeMtpPath(subDir, string.Empty);
+                    var dirName = Path.GetFileName(sanitizedSubDir.TrimEnd('\\'));
+                    if (string.IsNullOrEmpty(dirName)) dirName = sanitizedSubDir;
 
                     DateTime? lastWrite = null;
                     DateTime? creation = null;
                     try
                     {
-                        var info = device.GetDirectoryInfo(subDir);
+                        var info = device.GetDirectoryInfo(sanitizedSubDir);
                         lastWrite = info.LastWriteTime?.ToUniversalTime();
                         creation = info.CreationTime?.ToUniversalTime();
                     }
@@ -205,7 +217,7 @@ public class FileService : IFileService
                     yield return new FileItem
                     {
                         Name = dirName,
-                        FullPath = subDir,
+                        FullPath = sanitizedSubDir,
                         IsDirectory = true,
                         Length = 0,
                         LastWriteTimeUtc = lastWrite,
@@ -230,14 +242,15 @@ public class FileService : IFileService
                 foreach (var filePath in files)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var fileName = Path.GetFileName(filePath);
+                    var sanitizedFilePath = PathSecurityHelper.NormalizeAndSanitizeMtpPath(filePath, string.Empty);
+                    var fileName = Path.GetFileName(sanitizedFilePath);
                     long length = 0;
                     DateTime? lastWrite = null;
                     DateTime? creation = null;
 
                     try
                     {
-                        var info = device.GetFileInfo(filePath);
+                        var info = device.GetFileInfo(sanitizedFilePath);
                         length = (long)info.Length;
                         lastWrite = info.LastWriteTime?.ToUniversalTime();
                         creation = info.CreationTime?.ToUniversalTime();
@@ -247,7 +260,7 @@ public class FileService : IFileService
                     yield return new FileItem
                     {
                         Name = fileName,
-                        FullPath = filePath,
+                        FullPath = sanitizedFilePath,
                         IsDirectory = false,
                         Length = length,
                         LastWriteTimeUtc = lastWrite,
@@ -269,19 +282,31 @@ public class FileService : IFileService
 
     public IDisposable? CreateWatcher(string path, Action onDirectoryChanged)
     {
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+
+        if (string.IsNullOrWhiteSpace(path))
             return null;
+
+        string sanitizedPath;
+        try
+        {
+            sanitizedPath = PathSecurityHelper.GetSanitizedLocalPath(path);
+            if (!Directory.Exists(sanitizedPath))
+                return null;
+        }
+        catch
+        {
+            return null;
+        }
 
         try
         {
-            var watcher = new FileSystemWatcher(path)
+            var watcher = new FileSystemWatcher(sanitizedPath)
             {
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size,
                 IncludeSubdirectories = false,
                 EnableRaisingEvents = true
             };
 
-            // Debouncer para não sobrecarregar a interface com múltiplos eventos sucessivos
             var timer = new System.Timers.Timer(400) { AutoReset = false };
             timer.Elapsed += (_, _) =>
             {
@@ -321,6 +346,7 @@ public class FileService : IFileService
 
             if (item.IsMtp)
             {
+                var mtpPath = PathSecurityHelper.NormalizeAndSanitizeMtpPath(item.FullPath, string.Empty);
                 var devices = MediaDeviceManager.Instance?.GetDevices();
                 var device = devices?.FirstOrDefault(d => d.DeviceId == item.MtpDeviceId);
                 if (device == null)
@@ -331,16 +357,16 @@ public class FileService : IFileService
                     device.Connect();
                     if (item.IsDirectory)
                     {
-                        if (device.DirectoryExists(item.FullPath))
+                        if (device.DirectoryExists(mtpPath))
                         {
-                            device.DeleteDirectory(item.FullPath, true);
+                            device.DeleteDirectory(mtpPath, true);
                         }
                     }
                     else
                     {
-                        if (device.FileExists(item.FullPath))
+                        if (device.FileExists(mtpPath))
                         {
-                            device.DeleteFile(item.FullPath);
+                            device.DeleteFile(mtpPath);
                         }
                     }
                     device.Disconnect();
@@ -348,37 +374,68 @@ public class FileService : IFileService
                 return;
             }
 
+            string sanitizedPath = PathSecurityHelper.GetSanitizedLocalPath(item.FullPath);
+
             if (item.IsDirectory)
             {
-                if (Directory.Exists(item.FullPath))
+                // Proteção contra Symlinks e Junction Points durante exclusão:
+                // Se o diretório for um ReparsePoint, remover apenas a junção/link simbólico sem recursar no destino original!
+                if (PathSecurityHelper.IsReparsePoint(sanitizedPath))
+                {
+                    try
+                    {
+                        Directory.Delete(sanitizedPath, false);
+                    }
+                    catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                    {
+                        throw new IOException($"Não foi possível remover o link simbólico/junção '{Path.GetFileName(sanitizedPath)}': {ex.Message}", ex);
+                    }
+                    return;
+                }
+
+                if (Directory.Exists(sanitizedPath))
                 {
                     try
                     {
                         Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(
-                            item.FullPath,
+                            sanitizedPath,
                             Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
                             Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
                     }
-                    catch
+                    catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException || ex is NotSupportedException)
                     {
-                        Directory.Delete(item.FullPath, true);
+                        try
+                        {
+                            Directory.Delete(sanitizedPath, true);
+                        }
+                        catch (Exception innerEx) when (innerEx is IOException || innerEx is UnauthorizedAccessException)
+                        {
+                            throw new IOException($"Falha ao excluir o diretório '{Path.GetFileName(sanitizedPath)}': {innerEx.Message}", innerEx);
+                        }
                     }
                 }
             }
             else
             {
-                if (File.Exists(item.FullPath))
+                if (File.Exists(sanitizedPath))
                 {
                     try
                     {
                         Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(
-                            item.FullPath,
+                            sanitizedPath,
                             Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
                             Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
                     }
-                    catch
+                    catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException || ex is NotSupportedException)
                     {
-                        File.Delete(item.FullPath);
+                        try
+                        {
+                            File.Delete(sanitizedPath);
+                        }
+                        catch (Exception innerEx) when (innerEx is IOException || innerEx is UnauthorizedAccessException)
+                        {
+                            throw new IOException($"Falha ao excluir o arquivo '{Path.GetFileName(sanitizedPath)}': {innerEx.Message}", innerEx);
+                        }
                     }
                 }
             }
